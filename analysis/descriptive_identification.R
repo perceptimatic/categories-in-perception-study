@@ -2,12 +2,12 @@ TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
+
+library(tidyverse)
 source(paste0(SCRIPTS, "/pathnames.R"))
 source(paste0(SCRIPTS, "/aggregation.R"))
 source(paste0(SCRIPTS, "/cleanup.R"))
 source(paste0(SCRIPTS, "/identification.R"))
-
-library(tidyverse)
 
 assimilation_vectors_plot <- ggplot(assimilation_vectors,
        aes(x=`Phone`, y=Response, fill=`Proportion of Responses`)) +
@@ -32,7 +32,7 @@ assimilation_vectors_plot <- ggplot(assimilation_vectors,
                               frame.colour="black",
                               ticks.colour="black"))
 
-ssimilation_vectors_triphone <- 
+assimilation_vectors_triphone <- 
   id_data %>%
   group_by(`Listener Group`) %>%
   do(get_assimilation_vectors(.,  c("Context", "Triphone (Language)",

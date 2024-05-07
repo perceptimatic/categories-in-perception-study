@@ -10,3 +10,7 @@ full_phone_languages <- function(x) {
                     GL="Standard German", ES="Estonian", TU="Turkish")
   language_names[x]
 }
+
+get_phone1 <- function(a, b) ifelse(a < b, a, b)
+get_phone2 <- function(a, b) ifelse(a < b, b, a)
+contrast_label <- function(p1, p2)  paste0(p1, "–", p2)

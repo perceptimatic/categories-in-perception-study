@@ -41,27 +41,36 @@ discrimination <- read_csv(
     `Accuracy`=(`Accuracy -1/1`+1.)/2,
     TGT = sub(":", "ː", TGT),
     OTH = sub(":", "ː", OTH),
+    Context = paste0(prev_phone, "–", next_phone),
+    `TGT was A (first)` = 2 * (`TGT was A (first)` - 0.5),
     `Phone Language (Long)`=full_phone_languages(`Phone Language (Code)`),
     `Phone Language (Code)`=fix_phone_language_codes(`Phone Language (Code)`),
-    `Phone Contrast Asymmetrical` = paste0(TGT, ":", OTH),
+    `Phone Contrast Asymmetrical` = contrast_label(TGT, OTH),
     `Phone Contrast Asymmetrical (Language)` = paste0(
       `Phone Contrast Asymmetrical`, " (", `Phone Language (Code)`, ")"),
-    `Phone 1` = ifelse(TGT < OTH, TGT, OTH),
-    `Phone 2` = ifelse(TGT < OTH, OTH, TGT),
-    `Phone Contrast` = paste0(`Phone 1`, "–",
-                              `Phone 2`),
-    Context = paste0(prev_phone, "–", next_phone),
+    `Phone 1` = get_phone1(TGT, OTH),
+    `Phone 2` = get_phone2(TGT, OTH),
+    `Phone Contrast` = contrast_label(`Phone 1`, `Phone 2`),
+    `Phone Contrast (Language)`=paste0(`Phone Contrast`,
+                              " (", `Phone Language (Code)`, ")"),
     `Triphone Contrast`=paste0(prev_phone, `Phone 1`, next_phone,
                                "–",
                                prev_phone, `Phone 2`, next_phone),
-    `TGT was A (first)` = 2 * (`TGT was A (first)` - 0.5),
-    `Phone Contrast (Language)`=paste0(`Phone Contrast`,
-                              " (", `Phone Language (Code)`, ")"),
     `Triphone Contrast (Language)` = paste0(`Triphone Contrast`, " (",
                                          `Phone Language (Code)`, ")")
   ) %>%
   select(-language_indiv_code,-language_stimuli_code)
 
+discriminability_by_asymm_contrast <- repeated_average(
+  discrimination,
+  c(
+    "filename",
+    "Context",
+    "Phone Contrast Asymmetrical (Language)"
+  ),
+  c("Listener Group", "Phone Language (Code)", "Phone Language (Long)"),
+  c("Accuracy", "Accuracy and Certainty")
+) 
 
 discriminability_by_contrast <- repeated_average(
   discrimination,
@@ -73,7 +82,10 @@ discriminability_by_contrast <- repeated_average(
   ),
   c("Listener Group", "Phone Language (Code)", "Phone Language (Long)"),
   c("Accuracy", "Accuracy and Certainty")
-) %>%
+) 
+
+
+discriminability_by_contrast_wide <- discriminability_by_contrast %>%
   pivot_wider(names_from=`Listener Group`,
               values_from=c(`Accuracy`, `Accuracy and Certainty`),
               names_glue="{.value} {`Listener Group`}") %>%

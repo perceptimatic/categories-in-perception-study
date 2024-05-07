@@ -10,7 +10,6 @@ source(paste0(SCRIPTS, "/discrimination.R"))
 library(tidyverse)
 library(ggrepel)
 
-
 group_scatterplot <- function(d, variable_x, variable_y,
                               variable_label, variable_diff, force,
                               xlim=c(-1.1, 3), ylim=c(-1.1, 3),
@@ -59,7 +58,8 @@ group_scatterplot <- function(d, variable_x, variable_y,
 }
   
 certaccuracy_by_contrast_plot <- group_scatterplot(
-  discriminability_by_contrast, "Accuracy and Certainty English",
+  discriminability_by_contrast_wide,
+  "Accuracy and Certainty English",
   "Accuracy and Certainty French",
   "Phone Contrast (Language)",
   "Accuracy and Certainty Difference", 7,

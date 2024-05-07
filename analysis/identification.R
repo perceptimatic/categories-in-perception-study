@@ -80,11 +80,13 @@ assimilation_vectors <-
   read_id(IDENT_DATA) %>%
   group_by(`Listener Group`) %>%
   do(get_assimilation_vectors(.,  c("Context", "Phone (Language)",
-                                    "Phone", "Phone Language (Long)"),
+                                    "Phone", "Phone Language (Long)",
+                                    "Phone Language (Code)"),
                               "Response", "Goodness") %>% 
        repeated_average(c("Context", "Phone (Language)"),
-                        c("Phone", "Phone Language (Long)", "Response"),
+                        c("Phone", "Phone Language (Long)",
+                          "Phone Language (Code)", "Response"),
                         c("Proportion of Responses", "Goodness"),
                         na.rm=TRUE)) %>%
-  ungroup()
-
+  ungroup() %>%
+  select(-`Phone (Language)`)
