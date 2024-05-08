@@ -16,7 +16,7 @@ skld_score <- function(ass_tgt, ass_oth, eps) {
   o <- ifelse(near(ass_oth, 0), eps, ass_oth)
   kld_to <- sum(t*log(t/o))
   kld_ot <- sum(o*log(o/t))
-  return(-(kld_to+kld_ot)/(2.*k))
+  return(1-(kld_to+kld_ot)/(2.*k))
 }
 
 haskins_score <- function(ass_tgt, ass_oth) {
@@ -335,4 +335,4 @@ ggplot(inner_join(discr_haskins_collapsed, discr_pam_overlap), aes(x=Haskins, y=
 ggplot(discr_pam_overlap, aes(x=qlogis(pmin(1-CosOverlap, 0.9999)), y=JSD, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000"))
 ggplot(discr_pam_overlap, aes(x=(1-CosOverlap), y=JSD, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000"))
 
-ggplot(discr_pam_overlap, aes(x=SKLD, y=`Accuracy and Certainty`, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000"))
+ggplot(discr_pam_overlap, aes(x=SKLD, y=`Accuracy and Certainty`, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000")) + coord_cartesian(xlim=c())
