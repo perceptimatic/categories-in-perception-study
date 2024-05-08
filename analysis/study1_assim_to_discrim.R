@@ -11,12 +11,12 @@ source(paste0(SCRIPTS, "/identification.R"))
 source(paste0(SCRIPTS, "/discrimination.R"))
 
 skld_score <- function(ass_tgt, ass_oth, eps) {
+  k <- sum(c(eps,1)*log(c(eps,1)/c(1,eps)))
   t <- ifelse(near(ass_tgt, 0), eps, ass_tgt)
   o <- ifelse(near(ass_oth, 0), eps, ass_oth)
-  m <- (t+o)/2.
   kld_to <- sum(t*log(t/o))
   kld_ot <- sum(o*log(o/t))
-  return((kld_to+kld_ot)/2.)
+  return(-(kld_to+kld_ot)/(2.*k))
 }
 
 haskins_score <- function(ass_tgt, ass_oth) {
