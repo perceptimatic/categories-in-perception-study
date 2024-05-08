@@ -10,6 +10,15 @@ source(paste0(SCRIPTS, "/cleanup.R"))
 source(paste0(SCRIPTS, "/identification.R"))
 source(paste0(SCRIPTS, "/discrimination.R"))
 
+skld_score <- function(ass_tgt, ass_oth, eps) {
+  t <- ifelse(near(ass_tgt, 0), eps, ass_tgt)
+  o <- ifelse(near(ass_oth, 0), eps, ass_oth)
+  m <- (t+o)/2.
+  kld_to <- sum(t*log(t/o))
+  kld_ot <- sum(o*log(o/t))
+  return((kld_to+kld_ot)/2.)
+}
+
 haskins_score <- function(ass_tgt, ass_oth) {
   p <- 0
   for (i in 1:length(ass_tgt))
@@ -115,6 +124,8 @@ assimilation <- assimilation_vectors %>%
   pivot_longer(starts_with("Assimilation") | starts_with("Goodness"),
                names_pattern="(.*):(.*)", names_to=c(".value",
                                                      "Listener Group"))
+
+# FIXME: Add random identification simulation for Haskins only
 
 pam_overlap <- assimilation %>% 
   mutate(`Categorized 50`=map_lgl(Assimilation, ~ .x[[max.col(.x)]] >= 0.5),
@@ -252,6 +263,8 @@ pam_overlap <- assimilation %>%
                                ~ .x * .y),
     `AssGood:Phone 2`=map2(`Assimilation:Phone 2`, `Goodness:Phone 2`,
                                ~ .x * .y),
+    SKLD=map2_dbl(`Assimilation:Phone 1`, `Assimilation:Phone 2`,
+                 ~ skld_score(unlist(.x), unlist(.y), 0.0001)),
     CosOverlapGood=map2_dbl(`AssGood:Phone 1`, `AssGood:Phone 2`,
                         ~ sum(.x * .y, na.rm=TRUE)/
                           (sqrt(sum(.x*.x, na.rm=TRUE)))*
@@ -318,3 +331,8 @@ ggplot(discr_pam_overlap, aes(x=qlogis(pmin(1-CosOverlap, 0.9999)), y=`Accuracy 
 ggplot(discr_pam_overlap, aes(x=`Min Top Percentage`, y=`Accuracy and Certainty`)) + geom_point(size=3, pch=21, fill="#666666") + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw()
 
 ggplot(inner_join(discr_haskins_collapsed, discr_pam_overlap), aes(x=Haskins, y=`Accuracy and Certainty`, fill=qlogis(pmin(1-CosOverlap, 0.999)))) + geom_point(pch=21, size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  +  scale_fill_distiller(palette="Greys", direction=1)
+
+ggplot(discr_pam_overlap, aes(x=qlogis(pmin(1-CosOverlap, 0.9999)), y=JSD, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000"))
+ggplot(discr_pam_overlap, aes(x=(1-CosOverlap), y=JSD, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000"))
+
+ggplot(discr_pam_overlap, aes(x=SKLD, y=`Accuracy and Certainty`, fill=`PAM Simplified Type 60 E0.1`, shape=`PAM Simplified Type 60 E0.1`)) + geom_point(size=3) + facet_grid(~ `Listener Group`, scales = "free_x") + theme_bw() + theme(legend.position = "bottom")  + scale_shape_manual(values=c(Other=3, SC=21, CG=21, TC=21)) + scale_fill_manual(values=c(Other="#000000", TC="#ffffff", CG="#aaaaaa", SC="#000000"))
