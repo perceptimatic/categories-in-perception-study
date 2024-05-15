@@ -155,7 +155,7 @@ discr_by_contrast_pam_overlap <- left_join(
 certaccuracy_by_skld_pam_plot <- ggplot(
   discr_by_contrast_pam_overlap,
   aes(
-    x = Dot,
+    x = Overlap,
     y = `Accuracy and Certainty`,
     fill = `Same Top Choice`,
     size = `Categorization Threshold`
@@ -257,7 +257,8 @@ get_filename <- function(listener, predictor) {
 }
 
 run_brms_model <- function(f, d, filename) {
-  m <- brm(f, family="cumulative", file=filename, data=makenamesize(d))
+  m <- brm(f, family="cumulative", file=filename, data=makenamesize(d),
+           save_pars = save_pars(all = TRUE))
   m <- add_loo(m)
   return(m)
 }
@@ -267,8 +268,16 @@ regression_models <- tibble(
   Predictor=rep(c("Overlap", "Haskins"), 2),
   Formula=map(Predictor, ~ formula(paste0(
     "Accuracy.and.Certainty + 4 ~ ", .x, " + (1+", .x, "|Participant) + (1|",
-    .x, "|filename)")))
+    .x, "|filename)"))),
+  Filename=get_filename(`Listener Group`, Predictor)
 )
+
+
+regression_models <- regression_models %>%
+  mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
+                    \(f,l,fn) run_brms_model(
+                      f, filter(discr_pam_overlap, `Listener Group` == l), fn
+                    )))
 
 if (INTERACTIVE) {
   print(certaccuracy_by_skld_pam_plot)
