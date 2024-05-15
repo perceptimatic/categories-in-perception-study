@@ -251,7 +251,16 @@ discr_pam_overlap <- left_join(
     )
   )
 
-stop()
+
+get_filename <- function(listener, predictor) {
+  return(paste0(MODELS, "/model_", listener, "_", predictor))
+}
+
+run_brms_model <- function(f, d, filename) {
+  m <- brm(f, family="cumulative", file=filename, data=makenamesize(d))
+  m <- add_loo(m)
+  return(m)
+}
 
 regression_models <- tibble(
   `Listener Group`=c(rep("French", 2), rep("English", 2)),
@@ -260,58 +269,6 @@ regression_models <- tibble(
     "Accuracy.and.Certainty + 4 ~ ", .x, " + (1+", .x, "|Participant) + (1|",
     .x, "|filename)")))
 )
-
-regression_formulas <- list(
-  French=list(Overlap=formula(Accuracy.and.Certainty + 4 ~ Overlap +
-                                 (1+Overlap|Participant) +
-                                 (1+Overlap|filename)),
-              Haskins=formula(Accuracy.and.Certainty + 4 ~ Haskins +
-                                 (1+Haskins|Participant) +
-                                 (1+Haskins|filename))),
-          list(Overlap=formula(Accuracy.and.Certainty + 4 ~ Overlap +
-                                 (1+Overlap|Participant) +
-                                 (1+Overlap|filename)),
-               Haskins=formula(Accuracy.and.Certainty + 4 ~ Haskins +
-                                 (1+Haskins|Participant) +
-                                 (1+Haskins|filename))))
-regression_models <- list(French=list(Overlap=c(), Haskins=c()),
-                          English=list(Overlap=c(), Haskins=c()))
-regression_loo <- list(French=list(Overlap=c(), Haskins=c()),
-                          English=list(Overlap=c(), Haskins=c()))
-
-for (language in names(regression_formulas)) {
-  formulas_lg <- regression_formulas[[language]]
-  for (predictor in formulas_lg) {
-    formula_lg_pr <- formulas_lg[[predictor]]
-    d <- makenamesize(filter(discr_pam_overlap, `Listener Group` == language))
-  }
-}
-
-model_overlap_french <- brm(Accuracy.and.Certainty + 4 ~ Overlap +
-                              (1+Overlap|Participant) + (1+Overlap|filename),
-                            data=filter(makenamesize(discr_pam_overlap),
-                                        Listener.Group == "French"),
-                            family="cumulative",
-                            file="model_overlap_french",
-                            save_model="model_overlap_french.stan")
-model_haskins_french <- brm(Accuracy.and.Certainty + 4 ~ Haskins +
-                              (1+Haskins|Participant) + (1+Haskins|filename),
-                            data=filter(makenamesize(discr_pam_overlap),
-                                        Listener.Group == "French"),
-                            family="cumulative", cores=16,
-                            file="model_haskins_french")
-model_overlap_english <- brm(Accuracy.and.Certainty + 4 ~ Overlap +
-                              (1+Overlap|Participant) + (1+Overlap|filename),
-                            data=filter(makenamesize(discr_pam_overlap),
-                                        Listener.Group == "English"),
-                            family="cumulative", cores=16,
-                            file="model_overlap_english")
-model_haskins_english <- brm(Accuracy.and.Certainty + 4 ~ Haskins +
-                              (1+Haskins|Participant) + (1+Haskins|filename),
-                            data=filter(makenamesize(discr_pam_overlap),
-                                        Listener.Group == "English"),
-                            family="cumulative", cores=16,
-                            file="model_haskins_english")
 
 if (INTERACTIVE) {
   print(certaccuracy_by_skld_pam_plot)
