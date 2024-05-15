@@ -6,6 +6,7 @@ source(paste0(SCRIPTS, "/pathnames.R"))
 source(paste0(SCRIPTS, "/aggregation.R"))
 source(paste0(SCRIPTS, "/cleanup.R"))
 source(paste0(SCRIPTS, "/discrimination.R"))
+source(paste0(SCRIPTS, "/plotting.R"))
 
 library(tidyverse)
 library(ggrepel)
@@ -49,12 +50,8 @@ group_scatterplot <- function(d, variable_x, variable_y,
                                T0=23, T2=25)) +
     geom_point(size=2, fill="#aaaaaa") +
     coord_cartesian(xlim = xlim, ylim = ylim) +
-    theme_bw() +
-    theme(
-      legend.position = "none",
-      text = element_text(family = "Alegreya Sans", size = 12),
-      axis.text = element_text(size = 12, colour = "black")
-    )
+    cp_theme() +
+    theme(legend.position = "none")
 }
   
 certaccuracy_by_contrast_plot <- group_scatterplot(
@@ -87,25 +84,8 @@ certaccuracy_by_contrast_plot <- group_scatterplot(
            )
 )
 
-accuracy_by_contrast_plot <- group_scatterplot(
-  discriminability_by_contrast, "Accuracy English",
-  "Accuracy French", 
-  "Phone Contrast (Language)",
-  "Accuracy Difference", 30,
-  xlim=c(0.2,1), ylim=c(0.2,1),
-  rank_cutoff = 6
-)
-
-certaccuracy_accuracy_by_contrast_plot <- ggplot(
-  discriminability_by_contrast,
-  aes(x=`Accuracy Difference`,
-      y=`Accuracy and Certainty Difference`)) +
-  geom_point()
-
 if (INTERACTIVE) {
   print(certaccuracy_by_contrast_plot)
-  print(accuracy_by_contrast_plot)
-  print(certaccuracy_accuracy_by_contrast_plot)
 } else {
   ggsave(paste0(PLOTS, "/certaccuracy_by_contrast_plot_600.png"),
          plot=certaccuracy_by_contrast_plot,
