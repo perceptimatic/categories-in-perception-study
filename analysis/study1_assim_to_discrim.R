@@ -260,30 +260,41 @@ get_filename <- function(listener, predictor) {
 run_brms_model <- function(f, d, filename) {
   m <- brm(f, family="cumulative", file=filename, data=makenamesize(d),
            save_pars = save_pars(all = TRUE))
-  m <- add_loo(m)
+  m <- add_criterion(m, "loo")
   return(m)
 }
 
-regression_models <- tibble(
+regression_model_meta <- tibble(
   `Listener Group`=c(rep("French", 2), rep("English", 2)),
   Predictor=rep(c("Overlap", "Haskins"), 2),
   Formula=map(Predictor, ~ formula(paste0(
-    "Accuracy.and.Certainty + 4 ~ ", .x, " + (1+", .x, "|Participant) + (1|",
+    "Accuracy.and.Certainty + 4 ~ ", .x, " + (1+", .x, "|Participant) + (1+",
     .x, "|filename)"))),
   Filename=get_filename(`Listener Group`, Predictor)
 )
 
-
-regression_models <- regression_models %>%
+regression_models <- regression_model_meta %>%
   mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
                     \(f,l,fn) run_brms_model(
                       f, filter(discr_pam_overlap, `Listener Group` == l), fn
                     )))
 
+model_comparison <- pivot_wider(
+  regression_models, id_cols=`Listener Group`, names_from=Predictor,
+  values_from=Model) %>%
+  mutate(Loo=map2(Overlap, Haskins, loo_compare),
+         ELPD_Overlap=map_dbl(Loo, ~ .x[1,3]),
+         ELPD_Haskins=map_dbl(Loo, ~ .x[2,3]),
+         ELPD_Diff=map_dbl(Loo, ~ .x[2,1]),
+         ELPD_SEDiff=map_dbl(Loo, ~.x[2,2])) %>%
+  select(-Overlap, -Haskins)
+
+
 if (INTERACTIVE) {
   print(certaccuracy_by_skld_pam_plot)
   View(overlap_pam_stats)
   View(overlap_pam_tc_sc_stats)
+  View(model_comparison)
 } else {
   ggsave(
     paste0(PLOTS, "/certaccuracy_by_skld_pam_plot_600.png"),
@@ -295,4 +306,5 @@ if (INTERACTIVE) {
   )
   print(overlap_pam_stats)
   print(overlap_pam_tc_sc_stats)
+  print(model_comparison)
 }
