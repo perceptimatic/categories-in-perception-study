@@ -2,6 +2,7 @@ TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
+Sys.setlocale(locale="en_US.UTF-8")
 
 library(tidyverse)
 source(paste0(SCRIPTS, "/pathnames.R"))

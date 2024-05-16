@@ -5,6 +5,7 @@ SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
 
+Sys.setlocale(locale="en_US.UTF-8")
 library(tidyverse)
 library(brms)
 options(mc.cores=CORES)
