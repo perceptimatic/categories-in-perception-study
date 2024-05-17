@@ -1,14 +1,18 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
-CORES <- as.numeric(Sys.getenv("CPCORES"))
+STAN_CORES <- as.numeric(Sys.getenv("CPCORES"))
+STAN_THREADS <- as.numeric(Sys.getenv("CPTHREADS"))
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
 
+args <- commandArgs(trailingOnly = TRUE)
+#model_to_run <- as.integer(args[1])
+
 Sys.setlocale(locale="en_US.UTF-8")
 library(tidyverse)
 library(brms)
-options(mc.cores=CORES)
+options(mc.cores=STAN_CORES)
 
 source(paste0(SCRIPTS, "/pathnames.R"))
 source(paste0(SCRIPTS, "/aggregation.R"))
@@ -262,7 +266,9 @@ run_brms_model <- function(f, d, filename) {
     d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
                                        ordered=TRUE)))
   m <- brm(f, family="cumulative", file=filename, data=d,
-           save_pars = save_pars(all = TRUE), iter=3000)
+           save_pars = save_pars(all = TRUE), iter=3000,
+	   backend="cmdstanr", threads=threading(STAN_THREADS),
+	   stan_model_args = list(stanc_options = list("O1")))
   m <- add_criterion(m, "loo")
   return(m)
 }
@@ -271,13 +277,18 @@ regression_model_meta <- tibble(
   `Listener Group`=c(rep("French", 2), rep("English", 2)),
   Predictor=rep(c("Overlap", "Haskins"), 2),
   Formula=map(Predictor, ~ formula(paste0(
-    "Accuracy.and.Certainty ~ ", .x, " + (1+", .x, "|Participant) + (1+",
-    .x, "|filename)"))),
+    "Accuracy.and.Certainty ~ ", .x, " + (1+", .x, "|Participant) + (1|filename)"))),
   Filename=get_filename(`Listener Group`, Predictor)
 )
 
+#f <- regression_model_meta$Formula[[model_to_run]]
+#l <- regression_model_meta$`Listener Group`[[model_to_run]]
+#fn <- regression_model_meta$Filename[[model_to_run]]
+#run_brms_model(f, filter(discr_pam_overlap, `Listener Group` == l), fn)
+#stop()
+
 regression_models <- regression_model_meta %>%
-  mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
+  mutate(Model=future_pmap(list(Formula, `Listener Group`, Filename),
                     \(f,l,fn) run_brms_model(
                       f, filter(discr_pam_overlap, `Listener Group` == l), fn
                     )))
