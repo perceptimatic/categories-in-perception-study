@@ -6,7 +6,7 @@ SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
 
-args <- commandArgs(trailingOnly = TRUE)
+#args <- commandArgs(trailingOnly = TRUE)
 #model_to_run <- as.integer(args[1])
 
 Sys.setlocale(locale="en_US.UTF-8")
@@ -288,7 +288,7 @@ regression_model_meta <- tibble(
 #stop()
 
 regression_models <- regression_model_meta %>%
-  mutate(Model=future_pmap(list(Formula, `Listener Group`, Filename),
+  mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
                     \(f,l,fn) run_brms_model(
                       f, filter(discr_pam_overlap, `Listener Group` == l), fn
                     )))
@@ -302,6 +302,19 @@ model_comparison <- pivot_wider(
          ELPD_Diff=map_dbl(Loo, ~ .x[2,1]),
          ELPD_SEDiff=map_dbl(Loo, ~.x[2,2])) %>%
   select(-Overlap, -Haskins)
+
+haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
+                               data=discr_by_contrast_pam_overlap)
+haskins_lm <- lm(`Accuracy and Certainty` ~ Haskins,
+                 data=discr_by_contrast_pam_overlap)
+overlap_lm <- lm(`Accuracy and Certainty` ~ Overlap,
+                 data=discr_by_contrast_pam_overlap)
+diff_pred_ho <- predict(haskins_lm) - predict(overlap_lm)
+wrongness_ho <- abs(resid(haskins_lm)) - abs(resid(overlap_lm))
+print(cor.test(discr_by_contrast_pam_overlap$`Categorization Threshold`,
+         diff_pred_ho, method="spearman"))
+print(cor.test(discr_by_contrast_pam_overlap$`Categorization Threshold`,
+         diff_pred_ho*wrongness_ho, method="spearman"))
 
 
 if (INTERACTIVE) {
