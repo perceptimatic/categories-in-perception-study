@@ -258,8 +258,11 @@ get_filename <- function(listener, predictor) {
 }
 
 run_brms_model <- function(f, d, filename) {
-  m <- brm(f, family="cumulative", file=filename, data=makenamesize(d),
-           save_pars = save_pars(all = TRUE))
+  d <- makenamesize(mutate(
+    d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
+                                       ordered=TRUE)))
+  m <- brm(f, family="cumulative", file=filename, data=d,
+           save_pars = save_pars(all = TRUE), iter=3000)
   m <- add_criterion(m, "loo")
   return(m)
 }
@@ -268,7 +271,7 @@ regression_model_meta <- tibble(
   `Listener Group`=c(rep("French", 2), rep("English", 2)),
   Predictor=rep(c("Overlap", "Haskins"), 2),
   Formula=map(Predictor, ~ formula(paste0(
-    "Accuracy.and.Certainty + 4 ~ ", .x, " + (1+", .x, "|Participant) + (1+",
+    "Accuracy.and.Certainty ~ ", .x, " + (1+", .x, "|Participant) + (1+",
     .x, "|filename)"))),
   Filename=get_filename(`Listener Group`, Predictor)
 )
