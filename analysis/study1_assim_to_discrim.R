@@ -231,7 +231,6 @@ get_filename <- function(model_name) {
 clean_predictions <- function(predictions, d, dvmode, factorvars,
                               rescalevars) {
   for (var in unique(c(factorvars, rescalevars,
-                       "Accuracy and Certainty",
                        "Listener Group"))) {
     mnvar <- make.names(var)
     predictions[[var]] <- predictions[[mnvar]]
@@ -241,8 +240,8 @@ clean_predictions <- function(predictions, d, dvmode, factorvars,
       predictions,
       estimate=(estimate - 0.5)*6,
       conf.low=(conf.low - 0.5)*6,
-      conf.high=(conf.high - 0.5)*6,
-      `Accuracy and Certainty`=(`Accuracy and Certainty` - 0.5)*6)
+      conf.high=(conf.high - 0.5)*6
+    )
   } else if (dvmode == "collapse_ordinal") {
     predictions
   }
@@ -260,6 +259,7 @@ clean_predictions <- function(predictions, d, dvmode, factorvars,
   }
   for (var in factorvars) {
     predictions[[var]] <- factor(format(predictions[[var]], digits=2))
+    #predictions[[var]] <- cut(round(predictions[[var]], digits=2), 3)
   }
   return(predictions)
 }
@@ -306,14 +306,14 @@ model_specs <- list(
   ),
   ordinal_overlap=list(
     formula=formula("Accuracy.and.Certainty ~
-                    Overlap + Listener.Group + Overlap:Listener.Group +
+                    Overlap*Listener.Group +
                     (1 + Overlap|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     dvmode="ordered"
   ),
   ordinal_haskins=list(
     formula=formula("Accuracy.and.Certainty ~
-                    Haskins + Listener.Group + Haskins:Listener.Group +
+                    Haskins*Listener.Group +
                     (1 + Haskins|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     dvmode="ordered"
@@ -327,74 +327,35 @@ model_specs <- list(
   ),
   sigmoid_1c_mct=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group + Maximum.Categorization.Threshold +
-                         Listener.Group:Maximum.Categorization.Threshold +
+                         Listener.Group*Maximum.Categorization.Threshold +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
   sigmoid_1c_mct_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group + Maximum.Categorization.Threshold +
-                         Listener.Group:Maximum.Categorization.Threshold +
-                         Overlap +
-                         Overlap:Maximum.Categorization.Threshold +
-                         Listener.Group:Overlap +
-                         (1|Participant) + (1|filename)"),
-    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
-    dvmode="binarized"
-  ),
-  sigmoid_1c_gd_overlap=list(
-    formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group + Maximum.Categorization.Threshold +
-                         Listener.Group:Maximum.Categorization.Threshold +
-                         Goodness.Difference +
-                         Goodness.Difference:Maximum.Categorization.Threshold +
-                         Listener.Group:Overlap +
-                         (1|Participant) + (1|filename)"),
-    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
-    dvmode="binarized"
-  ),
-  sigmoid_1c_gd=list(
-    formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group + Goodness.Difference +
-                         Listener.Group:Goodness.Difference +
+                         Overlap*Maximum.Categorization.Threshold*Listener.Group +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),  
   sigmoid_1c_mct_gd=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group +
-                         Maximum.Categorization.Threshold + Goodness.Difference +
-                         Maximum.Categorization.Threshold:Goodness.Difference +
-                         Listener.Group:Goodness.Difference +
-                         Maximum.Categorization.Threshold:Listener.Group +
-                         Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
+                         Listener.Group*Maximum.Categorization.Threshold*Goodness.Difference +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),  
   sigmoid_1c_mct_gd_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group +
-                         Maximum.Categorization.Threshold + Goodness.Difference +
-                         Maximum.Categorization.Threshold:Goodness.Difference +
-                         Listener.Group:Goodness.Difference +
-                         Overlap + Listener.Group:Overlap +
-                         Maximum.Categorization.Threshold:Listener.Group +
-                         Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
-                         Overlap:Maximum.Categorization.Threshold +
-                         Overlap:Maximum.Categorization.Threshold:Goodness.Difference +
-                         Overlap:Goodness.Difference +
+                         Overlap*Maximum.Categorization.Threshold*Goodness.Difference*Listener.Group +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
   sigmoid_1c_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group + Overlap +
-                         Listener.Group:Overlap +
+                         Listener.Group*Overlap +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
@@ -408,30 +369,21 @@ model_specs <- list(
   ),
   sigmoid_2c_mct=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group +
-                         Maximum.Categorization.Threshold + 
-                         Maximum.Categorization.Threshold:Listener.Group +
+                         Maximum.Categorization.Threshold*Listener.Group +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
   ),
   sigmoid_2c_mct_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group +
-                         Maximum.Categorization.Threshold + 
-                         Maximum.Categorization.Threshold:Listener.Group +
-                         Overlap + 
-                         Overlap:Maximum.Categorization.Threshold +
-                         Overlap:Listener.Group +
+                         Overlap*Maximum.Categorization.Threshold*Listener.Group +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
   ),
   sigmoid_2c_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group +
-                         Overlap + 
-                         Overlap:Listener.Group +
+                         Overlap*Listener.Group +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
@@ -479,7 +431,8 @@ plot_pam_1c <- ggplot(
                   "Listener.Group"),
       draw=FALSE),
     discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "Yes",],
-    "binarized", "Maximum Categorization Threshold") %>%
+    "binarized",  "Maximum Categorization Threshold",
+    c("Goodness Difference", "Maximum Categorization Threshold")) %>%
     rename(`Estimated Accuracy and Certainty`=estimate),
   aes(x=`Goodness Difference`,
       y=`Estimated Accuracy and Certainty`,
@@ -499,7 +452,8 @@ plot_pam_overlap_1c <- ggplot(
                   "Listener.Group"),
       draw=FALSE),
     discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "Yes",],
-    "binarized", "Maximum Categorization Threshold") %>%
+    "binarized",  "Maximum Categorization Threshold",
+    c("Maximum Categorization Threshold", "Overlap")) %>%
     rename(`Estimated Accuracy and Certainty`=estimate),
   aes(x=`Overlap`,
       y=`Estimated Accuracy and Certainty`,
@@ -509,6 +463,105 @@ plot_pam_overlap_1c <- ggplot(
   scale_linetype_manual(
     values=c(`0.77`=1, `0.68`=5, `0.60`=2, `0.46`=4, `0.34`=3)) +
   cp_theme()
+
+plot_pam_overlap_2c <- ggplot(
+  clean_predictions(
+    plot_predictions(
+      models$sigmoid_2c_mct_overlap,
+      condition=c("Overlap", 
+                  "Maximum.Categorization.Threshold",
+                  "Listener.Group"),
+      draw=FALSE),
+    discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "No",],
+    "binarized",  "Maximum Categorization Threshold",
+    c("Maximum Categorization Threshold", "Overlap")) %>%
+    rename(`Estimated Accuracy and Certainty`=estimate),
+  aes(x=`Overlap`,
+      y=`Estimated Accuracy and Certainty`,
+      linetype=`Maximum Categorization Threshold`)) +
+  geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
+  geom_line() + facet_grid(~ `Listener Group`) +
+  scale_linetype_manual(
+    values=c(`0.98`=1, `0.62`=5, `0.49`=2, `0.39`=4, `0.25`=3)) +
+  cp_theme()
+
+
+
+discriminability_by_contrast_with_predictions <- repeated_average(
+  mutate(
+    discrimination,
+    `Prediction Overlap`=predict(models$ordinal_overlap, ndraws=100) %*%
+      c(-3,-2,-1,1,2,3),
+    `LL Overlap`=log_lik(models$ordinal_overlap, ndraws=100) %>% colMeans(),
+    `Prediction Haskins`=predict(models$ordinal_haskins, ndraws=100) %*%
+      c(-3,-2,-1,1,2,3),
+    `LL Haskins`=log_lik(models$ordinal_haskins, ndraws=100) %>% colMeans()
+    ),
+  c(
+    "filename",
+    "Context",
+    "Phone Contrast Asymmetrical (Language)",
+    "Phone Contrast (Language)"
+  ),
+  c("Listener Group", "Phone Language (Code)", "Phone Language (Long)"),
+  c("Accuracy", "Accuracy and Certainty", "Prediction Overlap",
+    "Prediction Haskins", "LL Overlap", "LL Haskins")
+) 
+
+discr_by_contrast_pam_overlap_with_predictions <- left_join(
+  discriminability_by_contrast_with_predictions,
+  pam_overlap,
+  by = c(
+    "Listener Group",
+    "Phone Language (Long)",
+    "Phone Language (Code)",
+    "Phone Contrast (Language)"
+  )
+)
+
+ggplot(
+  discr_by_contrast_pam_overlap_with_predictions,
+  aes(
+    x = Overlap,
+    y=Haskins,
+    fill=`LL Overlap`-`LL Haskins`
+  )
+) +
+  geom_point(stroke = 0.8, shape = 21, size=3) +
+  facet_grid( ~ `Listener Group`, scales = "free_x") +
+  cp_theme() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.margin = margin(t = 0, b = 0),
+    legend.spacing.y = unit(0, "in")
+  )  +
+  scale_fill_viridis_c(option="H") + 
+  scale_alpha(range=c(0, 1)) +
+  coord_cartesian(xlim =c(0, 1))
+
+ggplot(
+  discr_by_contrast_pam_overlap_with_predictions,
+  aes(
+    x = Haskins,
+    y=`Prediction Haskins`,
+    size=abs(`Prediction Haskins`-`Accuracy and Certainty`)
+    
+  )
+) +
+  geom_point(stroke = 0.8, shape = 21) +
+  facet_grid( ~ `Listener Group`, scales = "free_x") +
+  cp_theme() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.margin = margin(t = 0, b = 0),
+    legend.spacing.y = unit(0, "in")
+  )  +
+  lims(size=c(0,1)) + 
+  coord_cartesian(xlim = c(0, 0.5), ylim = c(0, 3))
+
+
 
 haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
                                data=discr_by_contrast_pam_overlap)
@@ -527,6 +580,8 @@ if (INTERACTIVE) {
   print(certaccuracy_by_skld_plot)
   print(certaccuracy_by_skld_pam_plot)
   print(plot_pam_1c)
+  print(plot_pam_overlap_1c)
+  print(plot_pam_overlap_2c)
   View(overlap_pam_stats)
   View(overlap_pam_tc_sc_stats)
 } else {
@@ -538,6 +593,33 @@ if (INTERACTIVE) {
     units = "in",
     dpi = 600
   )
+  ggsave(
+    paste0(PLOTS, "/pam_1c_plot_600.png"),
+    plot = plot_pam_1c,
+    width = 6.52,
+    height = 4.5,
+    units = "in",
+    dpi = 600
+  )
+   
+  ggsave(
+    paste0(PLOTS, "/pam_overlap_1c_plot.png"),
+    plot = plot_pam_overlap_1c,
+    width = 6.52,
+    height = 4.5,
+    units = "in",
+    dpi = 600
+  )
+  
+  ggsave(
+    paste0(PLOTS, "/pam_overlap_2c_plot.png"),
+    plot = plot_pam_overlap_2c,
+    width = 6.52,
+    height = 4.5,
+    units = "in",
+    dpi = 600
+  )
+   
   print(overlap_pam_stats)
   print(overlap_pam_tc_sc_stats)
 }
