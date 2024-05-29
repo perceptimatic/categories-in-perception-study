@@ -335,6 +335,8 @@ model_specs <- list(
                          Overlap + Listener.Group:Overlap +
                          Maximum.Categorization.Threshold:Listener.Group +
                          Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
+                         Overlap:Maximum.Categorization.Threshold +
+                         Overlap:Goodness.Difference +
                          (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
@@ -373,6 +375,7 @@ model_specs <- list(
                          Maximum.Categorization.Threshold + 
                          Maximum.Categorization.Threshold:Listener.Group +
                          Overlap + 
+                         Overlap:Maximum.Categorization.Threshold +
                          Overlap:Listener.Group +
                          (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
