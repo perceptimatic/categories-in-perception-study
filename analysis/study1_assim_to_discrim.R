@@ -383,7 +383,7 @@ models <- foreach(m = names(model_specs),
 }
 
 foreach(m = names(model_specs)) %do% {
-  add_criterion(models[[m]], "loo", file=get_filename(m))
+  m <- add_criterion(models[[m]], "loo", file=get_filename(m))
 }
 
 loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
