@@ -50,6 +50,7 @@ haskins_score <- function(ass_tgt, ass_oth, with_p50=TRUE) {
   return(as.numeric(p + 0.5*p50))
 }
 
+
 assimilation_to_contrast <- function(phones, assimilation, phone_var) {
   assimilation_p1 <- assimilation %>% rename(`Phone 1` = {{phone_var}}) %>%
     rename_with( ~ paste0(.x, ":Phone 1"), .cols = !`Phone 1`)
@@ -137,7 +138,7 @@ pam_overlap <- assimilation_vectors %>%
     Haskins=map2_dbl(
       `Assimilation:Phone 1`,
       `Assimilation:Phone 2`,
-      ~ 1- 0.5*(haskins_score(.x, .y) + haskins_score(.y, .x))
+      ~ 1-0.5*(haskins_score(.x, .y) + haskins_score(.y, .x))
     ),    
      `Maximum Categorization Threshold` = map2_dbl(`Top Percentage:Phone 1`,
                                            `Top Percentage:Phone 2`, min),
@@ -172,7 +173,7 @@ certaccuracy_by_skld_plot <- ggplot(
     legend.margin = margin(t = 0, b = 0),
     legend.spacing.y = unit(0, "in")
   )  +
-  scale_size(range = c(0.1, 12)) +
+  scale_size_area() +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 3))
 
 
@@ -273,7 +274,6 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
     d <- mutate(d, `Accuracy and Certainty`=`Accuracy and Certainty`/6 + 0.5)    
     family <- gaussian(link="logit")
   }
-  print(mean(d$`Goodness Difference`))
   d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
        `Maximum Categorization Threshold`=`Maximum Categorization Threshold`-0.5,
@@ -347,7 +347,8 @@ model_specs <- list(
   ),  
   sigmoid_1c_mct_gd_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
-                         Overlap*Maximum.Categorization.Threshold*Goodness.Difference*Listener.Group +
+                         Overlap*Maximum.Categorization.Threshold*Goodness.Difference*Listener.Group -
+                         Overlap:Maximum.Categorization.Threshold:Goodness.Difference:Listener.Group +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
@@ -404,8 +405,10 @@ models <- foreach(m = names(model_specs),
   add_criterion(models[[m]], "loo", file=get_filename(m))
 }
 
-loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
-                   models[["ordinal_haskins"]])
+loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]])
+loo_haskins <- loo(models[["ordinal_null"]], models[["ordinal_haskins"]])
+loo_haskins_overlap <- loo(models[["ordinal_overlap"]], models[["ordinal_haskins"]])
+
 
 loo_1c <- loo(models[["sigmoid_1c_null"]],
               models[["sigmoid_1c_mct"]],
@@ -440,6 +443,49 @@ plot_pam_1c <- ggplot(
   geom_line() + facet_grid(~ `Listener Group`) +
   scale_linetype_manual(
     values=c(`0.77`=1, `0.68`=5, `0.60`=2, `0.46`=4, `0.34`=3)) +
+  cp_theme()
+
+ggplot(
+  clean_predictions(
+    plot_predictions(
+      models$sigmoid_1c_mct_overlap,
+      condition=c("Overlap", 
+                  "Maximum.Categorization.Threshold",
+                  "Listener.Group"),
+      draw=FALSE),
+    discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "Yes",],
+    "binarized",  "Maximum Categorization Threshold",
+    c("Maximum Categorization Threshold", "Overlap")) %>%
+    rename(`Estimated Accuracy and Certainty`=estimate),
+  aes(x=`Overlap`,
+      y=`Estimated Accuracy and Certainty`,
+      linetype=`Maximum Categorization Threshold`)) +
+  geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
+  geom_line() + facet_grid(~ `Listener Group`) +
+  scale_linetype_manual(
+    values=c(`0.62`=1, `0.61`=5, `0.60`=2, `0.58`=4, `0.57`=3)) +
+  cp_theme()
+
+
+ggplot(
+  clean_predictions(
+    plot_predictions(
+      models$sigmoid_1c_mct_gd_overlap,
+      condition=c("Overlap", 
+                  "Maximum.Categorization.Threshold",
+                  "Listener.Group"),
+      draw=FALSE),
+    discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "Yes",],
+    "binarized",  "Maximum Categorization Threshold",
+    c("Maximum Categorization Threshold", "Overlap")) %>%
+    rename(`Estimated Accuracy and Certainty`=estimate),
+  aes(x=`Overlap`,
+      y=`Estimated Accuracy and Certainty`,
+      linetype=`Maximum Categorization Threshold`)) +
+  geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
+  geom_line() + facet_grid(~ `Listener Group`) +
+  scale_linetype_manual(
+    values=c(`0.62`=1, `0.61`=5, `0.60`=2, `0.58`=4, `0.57`=3)) +
   cp_theme()
 
 plot_pam_overlap_1c <- ggplot(
@@ -486,15 +532,12 @@ plot_pam_overlap_2c <- ggplot(
 
 
 
-discriminability_by_contrast_with_predictions <- repeated_average(
+ll_by_contrast <- repeated_average(
   mutate(
     discrimination,
-    `Prediction Overlap`=predict(models$ordinal_overlap, ndraws=100) %*%
-      c(-3,-2,-1,1,2,3),
-    `LL Overlap`=log_lik(models$ordinal_overlap, ndraws=100) %>% colMeans(),
-    `Prediction Haskins`=predict(models$ordinal_haskins, ndraws=100) %*%
-      c(-3,-2,-1,1,2,3),
-    `LL Haskins`=log_lik(models$ordinal_haskins, ndraws=100) %>% colMeans()
+    `Log Lik. Overlap minus Haskins`=
+      log_lik(models$ordinal_overlap, ndraws=100) %>% colMeans() -
+      log_lik(models$ordinal_haskins, ndraws=100) %>% colMeans()
     ),
   c(
     "filename",
@@ -503,12 +546,8 @@ discriminability_by_contrast_with_predictions <- repeated_average(
     "Phone Contrast (Language)"
   ),
   c("Listener Group", "Phone Language (Code)", "Phone Language (Long)"),
-  c("Accuracy", "Accuracy and Certainty", "Prediction Overlap",
-    "Prediction Haskins", "LL Overlap", "LL Haskins")
-) 
-
-discr_by_contrast_pam_overlap_with_predictions <- left_join(
-  discriminability_by_contrast_with_predictions,
+  c("Log Lik. Overlap minus Haskins")
+) %>% left_join(
   pam_overlap,
   by = c(
     "Listener Group",
@@ -516,18 +555,22 @@ discr_by_contrast_pam_overlap_with_predictions <- left_join(
     "Phone Language (Code)",
     "Phone Contrast (Language)"
   )
+) %>% mutate(
+  `Positive difference`=ifelse(`Log Lik. Overlap minus Haskins` >= 0,
+                               "Yes", "No")
 )
 
-ggplot(
-  discr_by_contrast_pam_overlap_with_predictions,
+overlap_vs_haskins_plot <- ggplot(
+  ll_by_contrast,
   aes(
-    x = Overlap,
-    y=Haskins,
-    fill=`LL Overlap`-`LL Haskins`
+    y =Haskins,
+    x=Overlap,
+    size=`Log Lik. Overlap minus Haskins`,
+    fill=`Positive difference`
   )
 ) +
-  geom_point(stroke = 0.8, shape = 21, size=3) +
-  facet_grid( ~ `Listener Group`, scales = "free_x") +
+  geom_point(pch=21, stroke=0.8) +
+  facet_grid( ~ `Listener Group`) +
   cp_theme() +
   theme(
     legend.position = "bottom",
@@ -535,41 +578,9 @@ ggplot(
     legend.margin = margin(t = 0, b = 0),
     legend.spacing.y = unit(0, "in")
   )  +
-  scale_fill_viridis_c(option="H") + 
-  scale_alpha(range=c(0, 1)) +
-  coord_cartesian(xlim =c(0, 1))
+  scale_size_area() +
+  scale_fill_manual(values=c(Yes="black", No="white"))
 
-ggplot(
-  discr_by_contrast_pam_overlap_with_predictions,
-  aes(
-    x = Haskins,
-    y=`Prediction Haskins`,
-    size=abs(`Prediction Haskins`-`Accuracy and Certainty`)
-    
-  )
-) +
-  geom_point(stroke = 0.8, shape = 21) +
-  facet_grid( ~ `Listener Group`, scales = "free_x") +
-  cp_theme() +
-  theme(
-    legend.position = "bottom",
-    legend.box = "vertical",
-    legend.margin = margin(t = 0, b = 0),
-    legend.spacing.y = unit(0, "in")
-  )  +
-  lims(size=c(0,1)) + 
-  coord_cartesian(xlim = c(0, 0.5), ylim = c(0, 3))
-
-
-
-haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
-                               data=discr_by_contrast_pam_overlap)
-haskins_lm <- lm(`Accuracy and Certainty` ~ Haskins,
-                 data=discr_by_contrast_pam_overlap)
-overlap_lm <- lm(`Accuracy and Certainty` ~ Overlap,
-                 data=discr_by_contrast_pam_overlap)
-diff_pred_ho <- predict(haskins_lm) - predict(overlap_lm)
-wrongness_ho <- abs(resid(haskins_lm)) - abs(resid(overlap_lm))
 
 print(cor.test(discr_by_contrast_pam_overlap$`Goodness Difference`,
                1-discr_by_contrast_pam_overlap$`Overlap`,
@@ -578,6 +589,7 @@ print(cor.test(discr_by_contrast_pam_overlap$`Goodness Difference`,
 if (INTERACTIVE) {
   print(certaccuracy_by_skld_plot)
   print(certaccuracy_by_skld_pam_plot)
+  print(overlap_vs_haskins_plot)
   print(plot_pam_1c)
   print(plot_pam_overlap_1c)
   print(plot_pam_overlap_2c)
@@ -587,6 +599,14 @@ if (INTERACTIVE) {
   ggsave(
     paste0(PLOTS, "/certaccuracy_by_skld_pam_plot_600.png"),
     plot = certaccuracy_by_skld_pam_plot,
+    width = 6.52,
+    height = 4.5,
+    units = "in",
+    dpi = 600
+  )
+  ggsave(
+    paste0(PLOTS, "/overlap_vs_haskins_plot_600.png"),
+    plot = overlap_vs_haskins_plot,
     width = 6.52,
     height = 4.5,
     units = "in",
@@ -624,6 +644,8 @@ if (INTERACTIVE) {
 }
 print(models)
 print(loo_overlap)
+print(loo_haskins)
+print(loo_haskins_overlap)
 print(loo_1c)
 print(loo_2c)
 
