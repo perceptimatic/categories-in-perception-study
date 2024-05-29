@@ -1,6 +1,10 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 CORES <- as.numeric(Sys.getenv("CPCORES"))
+<<<<<<< HEAD
+=======
+GPU <- Sys.getenv("CPGPU")
+>>>>>>> 7c3a312 (change analysis for Study 1)
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
@@ -285,23 +289,32 @@ get_filename <- function(model_name) {
   return(paste0(MODELS, "/model_", model_name))
 }
 
-run_brms_model <- function(f, d, filename, prior=NULL) {
+run_brms_model <- function(f, d, filename, gpuid, prior=NULL) {
   d <- makenamesize(mutate(
     d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
                                        ordered=TRUE),
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2)))
-  m <- brm(f, family="cumulative", file=filename, data=d,
-           save_pars = save_pars(all = TRUE),
-	         backend="cmdstanr",
-	         stan_model_args = list(stanc_options = list("O1")),
-           prior=prior)
+  if (gpuid != "") {
+    m <- brm(f, family="cumulative", file=filename, data=d,
+             save_pars = save_pars(all = TRUE),
+	           backend="cmdstanr",
+             opencl=eval(parse(gpuid)),
+	           stan_model_args = list(stanc_options = list("O1")),
+             prior=prior)
+  } else {
+    m <- brm(f, family="cumulative", file=filename, data=d,
+             save_pars = save_pars(all = TRUE),
+	           backend="cmdstanr",
+	           stan_model_args = list(stanc_options = list("O1")),
+             prior=prior)    
+  }
   m <- add_criterion(m, "waic")
   return(m)
 }
 
 model_specs <- list(
   ordinal_null=list(
-    formula=formula("Accuracy.and.Certainty|thresh(gr=Participant) ~
+    formula=formula("Accuracy.and.Certainty ~
                     Listener.Group + 
                     (1|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
