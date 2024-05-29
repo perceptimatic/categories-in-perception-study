@@ -231,8 +231,10 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
   if (dvmode == "ordered") {
     d <- mutate(d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
                                                    ordered=TRUE))
+    family <- "cumulative"
   } else if (dvmode == "binarized") {
     d <- mutate(d, `Accuracy and Certainty`=`Accuracy and Certainty`/6 + 0.5)    
+    family <- gaussian(link="logit")
   }
   d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
@@ -241,12 +243,14 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
        `Goodness Difference`=scale(`Goodness Difference`)))
   if (gpuid != "") {
     m <- brm(f, file=filename, data=d,
+             family=family,
              save_pars = save_pars(all = TRUE),
 	           backend="cmdstanr",
              opencl=eval(parse(text=gpuid)),
 	           stan_model_args = list(stanc_options = list("O1")))
   } else {
     m <- brm(f, file=filename, data=d,
+             family=family,
              save_pars = save_pars(all = TRUE),
 	           backend="cmdstanr",
 	           stan_model_args = list(stanc_options = list("O1")))    
@@ -258,32 +262,28 @@ model_specs <- list(
   ordinal_null=list(
     formula=formula("Accuracy.and.Certainty ~
                     Listener.Group + 
-                    (1|Participant) + (1 + Listener.Group|filename)",
-                    family="cumulative"),
+                    (1|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     dvmode="ordered"
   ),
   ordinal_overlap=list(
     formula=formula("Accuracy.and.Certainty ~
                     Overlap + Listener.Group + Overlap:Listener.Group +
-                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)",
-                    family="cumulative"),
+                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     dvmode="ordered"
   ),
   ordinal_haskins=list(
     formula=formula("Accuracy.and.Certainty ~
                     Haskins + Listener.Group + Haskins:Listener.Group +
-                    (1 + Haskins|Participant) + (1 + Listener.Group|filename)",
-                    family="cumulative"),
+                    (1 + Haskins|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     dvmode="ordered"
   ),
   sigmoid_1c_null=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + 
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
@@ -291,8 +291,7 @@ model_specs <- list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Maximum.Categorization.Threshold +
                          Listener.Group:Maximum.Categorization.Threshold +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
@@ -303,8 +302,7 @@ model_specs <- list(
                          Overlap +
                          Overlap:Maximum.Categorization.Threshold +
                          Listener.Group:Overlap +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
@@ -315,8 +313,7 @@ model_specs <- list(
                          Goodness.Difference +
                          Goodness.Difference:Maximum.Categorization.Threshold +
                          Listener.Group:Overlap +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
@@ -324,8 +321,7 @@ model_specs <- list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Goodness.Difference +
                          Listener.Group:Goodness.Difference +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),  
@@ -337,8 +333,7 @@ model_specs <- list(
                          Listener.Group:Goodness.Difference +
                          Maximum.Categorization.Threshold:Listener.Group +
                          Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),  
@@ -353,8 +348,7 @@ model_specs <- list(
                          Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
                          Overlap:Maximum.Categorization.Threshold +
                          Overlap:Goodness.Difference +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
@@ -362,16 +356,14 @@ model_specs <- list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Overlap +
                          Listener.Group:Overlap +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
   sigmoid_2c_null=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + 
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
   ),
@@ -380,8 +372,7 @@ model_specs <- list(
                          Listener.Group +
                          Maximum.Categorization.Threshold + 
                          Maximum.Categorization.Threshold:Listener.Group +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
   ),
@@ -393,8 +384,7 @@ model_specs <- list(
                          Overlap + 
                          Overlap:Maximum.Categorization.Threshold +
                          Overlap:Listener.Group +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
   ),
@@ -403,8 +393,7 @@ model_specs <- list(
                          Listener.Group +
                          Overlap + 
                          Overlap:Listener.Group +
-                         (1|Participant) + (1|filename)",
-                        family=gaussian(link="logit")),
+                         (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
   )
@@ -413,15 +402,16 @@ model_specs <- list(
 
 models <- foreach(m = names(model_specs),
                   .final = function(x) setNames(x, names(model_specs))) %do% {
-  model <- run_brms_model(model_specs[[m]][["formula"]],
+  run_brms_model(model_specs[[m]][["formula"]],
                  discr_pam_overlap[model_specs[[m]][["subset"]],],
                  get_filename(m),
                  GPU,
                  model_specs[[m]][["dvmode"]])
 }
 
-foreach(m = names(model_specs)) %do% {
-  m <- add_criterion(models[[m]], "loo", file=get_filename(m))
+models <- foreach(m = names(model_specs),
+                  .final = function(x) setNames(x, names(model_specs))) %do% {
+  add_criterion(models[[m]], "loo", file=get_filename(m))
 }
 
 loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
