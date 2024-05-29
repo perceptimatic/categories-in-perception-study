@@ -298,6 +298,7 @@ model_specs <- list(
                          Listener.Group + Maximum.Categorization.Threshold +
                          Listener.Group:Maximum.Categorization.Threshold +
                          Overlap +
+                         Overlap:Maximum.Categorization.Threshold +
                          Listener.Group:Overlap +
                          (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
