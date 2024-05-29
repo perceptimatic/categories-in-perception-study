@@ -1,18 +1,20 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
-STAN_CORES <- as.numeric(Sys.getenv("CPCORES"))
+CORES <- as.numeric(Sys.getenv("CPCORES"))
 STAN_THREADS <- as.numeric(Sys.getenv("CPTHREADS"))
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
 
-#args <- commandArgs(trailingOnly = TRUE)
+args <- commandArgs(trailingOnly = TRUE)
 #model_to_run <- as.integer(args[1])
 
 Sys.setlocale(locale="en_US.UTF-8")
 library(tidyverse)
 library(brms)
-options(mc.cores=STAN_CORES)
+library(foreach)
+
+options(mc.cores=CORES)
 
 source(paste0(SCRIPTS, "/pathnames.R"))
 source(paste0(SCRIPTS, "/aggregation.R"))
@@ -49,7 +51,6 @@ haskins_score <- function(ass_tgt, ass_oth, with_p50=TRUE) {
     p50 <- sum(tgt*(1-tgt)*(1-oth)) + sum((tgt^2)*oth)
   return(as.numeric(p + 0.5*p50))
 }
-
 
 assimilation_to_contrast <- function(phones, assimilation, phone_var) {
   assimilation_p1 <- assimilation %>% rename(`Phone 1` = {{phone_var}}) %>%
@@ -140,7 +141,7 @@ pam_overlap <- assimilation_vectors %>%
       `Assimilation:Phone 2`,
       ~ 1- 0.5*(haskins_score(.x, .y) + haskins_score(.y, .x))
     ),    
-     `Categorization Threshold` = map2_dbl(`Top Percentage:Phone 1`,
+     `Maximum Categorization Threshold` = map2_dbl(`Top Percentage:Phone 1`,
                                            `Top Percentage:Phone 2`, min),
     `Same Top Choice` = map2_chr(`Top Choice:Phone 1`, `Top Choice:Phone 2`,
                                  ~ c("No", "Yes")[(.x == .y) + 1])
@@ -157,13 +158,33 @@ discr_by_contrast_pam_overlap <- left_join(
     )
   )
 
+certaccuracy_by_skld_plot <- ggplot(
+  discr_by_contrast_pam_overlap,
+  aes(
+    x = Overlap,
+    y = `Accuracy and Certainty`
+  )
+) +
+  geom_point(stroke = 0.8, shape = 21) +
+  facet_grid( ~ `Listener Group`, scales = "free_x") +
+  cp_theme() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.margin = margin(t = 0, b = 0),
+    legend.spacing.y = unit(0, "in")
+  )  +
+  scale_size(range = c(0.1, 12)) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 3))
+
+
 certaccuracy_by_skld_pam_plot <- ggplot(
   discr_by_contrast_pam_overlap,
   aes(
     x = Overlap,
     y = `Accuracy and Certainty`,
     fill = `Same Top Choice`,
-    size = `Categorization Threshold`
+    size = `Maximum Categorization Threshold`
   )
 ) +
   geom_point(stroke = 0.8, shape = 21) +
@@ -189,61 +210,65 @@ overlap_pam_stats <- discr_by_contrast_pam_overlap %>%
 
 overlap_pam_tc_sc_stats <- discr_by_contrast_pam_overlap %>%
   summarize(
-    `Median threshold` = median(`Categorization Threshold`),
-    `Q3 threshold` = quantile(`Categorization Threshold`, 0.75),
-    `Cor with threshold` = cor(`Categorization Threshold`,
-                               `Accuracy and Certainty`, method = "spearman"),
-    `GLM Threshold-only` = list(glm(
-      `Accuracy and Certainty`/3 ~ rank(`Categorization Threshold`),
-      family=gaussian(link="logit")
-    )),
-   `GLM Threshold + Overlap` = list(glm(
-      `Accuracy and Certainty`/3 ~
-        rank(`Categorization Threshold`) + `Overlap`,
-        family=gaussian(link="logit")
-    )),
-    `Cor with GD` = cor(`Goodness Difference`,
-      `Accuracy and Certainty`,
-      method = "spearman"
-    ),
-    `GLM GD-only` = list(glm(
-      `Accuracy and Certainty`/3 ~ rank(`Goodness Difference`),
-      family=gaussian(link="logit")
-    )),
-    `GLM GD + Overlap` = list(glm(
-      `Accuracy and Certainty`/3 ~ rank(`Goodness Difference`) + Overlap, 
-      family=gaussian(link="logit")
-    )),
+    `Median threshold` = median(`Maximum Categorization Threshold`),
+    `Q3 threshold` = quantile(`Maximum Categorization Threshold`, 0.75),
     .by = c("Same Top Choice", "Listener Group")
-  ) %>%
-  mutate(`GLM Threshold-only >0 pval`=map_dbl(`GLM Threshold-only`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=FALSE)),
-         `GLM Threshold-only <0 pval`=map_dbl(`GLM Threshold-only`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=TRUE)),
-         `GLM Threshold + Overlap >0 pval`=map_dbl(`GLM Threshold + Overlap`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=FALSE)),
-         `GLM Threshold + Overlap <0 pval`=map_dbl(`GLM Threshold + Overlap`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=TRUE)),
-         `GLM Overlap + Threshold <0 pval`=map_dbl(`GLM Threshold + Overlap`,
-                                          ~ pt(coef(summary(.x))[3,3],
-                                               .x$df.residual, lower=TRUE)),
-         `GLM GD-only >0 pval`=map_dbl(`GLM GD-only`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=FALSE)),
-         `GLM GD-only <0 pval`=map_dbl(`GLM GD-only`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=TRUE)),
-         `GLM GD + Overlap >0 pval`=map_dbl(`GLM GD + Overlap`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=FALSE)),
-         `GLM GD + Overlap <0 pval`=map_dbl(`GLM GD + Overlap`,
-                                          ~ pt(coef(summary(.x))[2,3],
-                                               .x$df.residual, lower=TRUE))
-         )
+  )
+    
+#    ,
+#    `Cor with threshold` = cor(`Maximum Categorization Threshold`,
+#                               `Accuracy and Certainty`, method = "spearman"),
+#    `GLM Threshold-only` = list(glm(
+#      `Accuracy and Certainty`/3 ~ rank(`Maximum Categorization Threshold`),
+#      family=gaussian(link="logit")
+#    )),
+#   `GLM Threshold + Overlap` = list(glm(
+#      `Accuracy and Certainty`/3 ~
+#        rank(`Maximum Categorization Threshold`) + `Overlap`,
+#        family=gaussian(link="logit")
+#    )),
+#    `Cor with GD` = cor(`Goodness Difference`,
+#      `Accuracy and Certainty`,
+#      method = "spearman"
+#    ),
+#    `GLM GD-only` = list(glm(
+#      `Accuracy and Certainty`/3 ~ rank(`Goodness Difference`),
+#      family=gaussian(link="logit")
+#    )),
+#    `GLM GD + Overlap` = list(glm(
+#      `Accuracy and Certainty`/3 ~ rank(`Goodness Difference`) + Overlap, 
+#      family=gaussian(link="logit")
+#    )),
+#    .by = c("Same Top Choice", "Listener Group")
+#  ) %>%
+#  mutate(`GLM Threshold-only >0 pval`=map_dbl(`GLM Threshold-only`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=FALSE)),
+#         `GLM Threshold-only <0 pval`=map_dbl(`GLM Threshold-only`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=TRUE)),
+#         `GLM Threshold + Overlap >0 pval`=map_dbl(`GLM Threshold + Overlap`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=FALSE)),
+#         `GLM Threshold + Overlap <0 pval`=map_dbl(`GLM Threshold + Overlap`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=TRUE)),
+#         `GLM Overlap + Threshold <0 pval`=map_dbl(`GLM Threshold + Overlap`,
+#                                          ~ pt(coef(summary(.x))[3,3],
+#                                               .x$df.residual, lower=TRUE)),
+#         `GLM GD-only >0 pval`=map_dbl(`GLM GD-only`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=FALSE)),
+#         `GLM GD-only <0 pval`=map_dbl(`GLM GD-only`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=TRUE)),
+#         `GLM GD + Overlap >0 pval`=map_dbl(`GLM GD + Overlap`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=FALSE)),
+#         `GLM GD + Overlap <0 pval`=map_dbl(`GLM GD + Overlap`,
+#                                          ~ pt(coef(summary(.x))[2,3],
+#                                               .x$df.residual, lower=TRUE))
+#         )
 
 discr_pam_overlap <- left_join(
     discrimination,
@@ -256,30 +281,51 @@ discr_pam_overlap <- left_join(
     )
   )
 
+#get_filename <- function(listener, predictor) {
+#  return(paste0(MODELS, "/model_", listener, "_", predictor))
+#}
 
-get_filename <- function(listener, predictor) {
-  return(paste0(MODELS, "/model_", listener, "_", predictor))
+get_filename <- function(model_name) {
+  return(paste0(MODELS, "/model_", model_name))
 }
 
-run_brms_model <- function(f, d, filename) {
+run_brms_model <- function(f, d, filename, prior=NULL) {
   d <- makenamesize(mutate(
     d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
                                        ordered=TRUE)))
   m <- brm(f, family="cumulative", file=filename, data=d,
            save_pars = save_pars(all = TRUE), iter=3000,
-	   backend="cmdstanr", threads=threading(STAN_THREADS),
-	   stan_model_args = list(stanc_options = list("O1")))
+	         backend="cmdstanr", threads=threading(STAN_THREADS),
+	         stan_model_args = list(stanc_options = list("O1")),
+           prior=prior)
   m <- add_criterion(m, "loo")
   return(m)
 }
 
-regression_model_meta <- tibble(
-  `Listener Group`=c(rep("French", 2), rep("English", 2)),
-  Predictor=rep(c("Overlap", "Haskins"), 2),
-  Formula=map(Predictor, ~ formula(paste0(
-    "Accuracy.and.Certainty ~ ", .x, " + (1+", .x, "|Participant) + (1|filename)"))),
-  Filename=get_filename(`Listener Group`, Predictor)
+model_specs <- list(
+  ordinal_null=list(
+    formula=formula("Accuracy.and.Certainty ~ Listener.Group + (1|Participant) +
+    (1 + Listener.Group|filename)"),
+    subset=TRUE,
+    prior=NULL
+  )
 )
+
+models <- foreach(m = names(model_specs),
+                  .final = function(x) setNames(x, names(model_specs))) %do% {
+  run_brms_model(model_specs[[m]][["formula"]],
+                 discr_pam_overlap[model_specs[[m]][["subset"]],],
+                 get_filename(m),
+                 model_specs[[m]][["prior"]])
+}
+
+#regression_model_meta <- tibble(
+#  `Listener Group`=c(rep("French", 2), rep("English", 2)),
+#  Predictor=rep(c("Overlap", "Haskins"), 2),
+#  Formula=map(Predictor, ~ formula(paste0(
+#    "Accuracy.and.Certainty ~ ", .x, " + (1+", .x, "|Participant) + (1|filename)"))),
+#  Filename=get_filename(`Listener Group`, Predictor)
+#)
 
 #f <- regression_model_meta$Formula[[model_to_run]]
 #l <- regression_model_meta$`Listener Group`[[model_to_run]]
@@ -287,21 +333,21 @@ regression_model_meta <- tibble(
 #run_brms_model(f, filter(discr_pam_overlap, `Listener Group` == l), fn)
 #stop()
 
-regression_models <- regression_model_meta %>%
-  mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
-                    \(f,l,fn) run_brms_model(
-                      f, filter(discr_pam_overlap, `Listener Group` == l), fn
-                    )))
+#regression_models <- regression_model_meta %>%
+#  mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
+#                    \(f,l,fn) run_brms_model(
+#                      f, filter(discr_pam_overlap, `Listener Group` == l), fn
+#                    )))
 
-model_comparison <- pivot_wider(
-  regression_models, id_cols=`Listener Group`, names_from=Predictor,
-  values_from=Model) %>%
-  mutate(Loo=map2(Overlap, Haskins, loo_compare),
-         ELPD_Overlap=map_dbl(Loo, ~ .x[1,3]),
-         ELPD_Haskins=map_dbl(Loo, ~ .x[2,3]),
-         ELPD_Diff=map_dbl(Loo, ~ .x[2,1]),
-         ELPD_SEDiff=map_dbl(Loo, ~.x[2,2])) %>%
-  select(-Overlap, -Haskins)
+#model_comparison <- pivot_wider(
+#  regression_models, id_cols=`Listener Group`, names_from=Predictor,
+#  values_from=Model) %>%
+#  mutate(Loo=map2(Overlap, Haskins, loo_compare),
+#         ELPD_Overlap=map_dbl(Loo, ~ .x[1,3]),
+#         ELPD_Haskins=map_dbl(Loo, ~ .x[2,3]),
+#         ELPD_Diff=map_dbl(Loo, ~ .x[2,1]),
+#         ELPD_SEDiff=map_dbl(Loo, ~.x[2,2])) %>%
+#  select(-Overlap, -Haskins)
 
 haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
                                data=discr_by_contrast_pam_overlap)
@@ -311,17 +357,17 @@ overlap_lm <- lm(`Accuracy and Certainty` ~ Overlap,
                  data=discr_by_contrast_pam_overlap)
 diff_pred_ho <- predict(haskins_lm) - predict(overlap_lm)
 wrongness_ho <- abs(resid(haskins_lm)) - abs(resid(overlap_lm))
-print(cor.test(discr_by_contrast_pam_overlap$`Categorization Threshold`,
-         diff_pred_ho, method="spearman"))
-print(cor.test(discr_by_contrast_pam_overlap$`Categorization Threshold`,
-         diff_pred_ho*wrongness_ho, method="spearman"))
 
+print(cor.test(discr_by_contrast_pam_overlap$`Goodness Difference`,
+               1-discr_by_contrast_pam_overlap$`Overlap`,
+               method="spearman", exact=FALSE))
 
 if (INTERACTIVE) {
+  print(certaccuracy_by_skld_plot)
   print(certaccuracy_by_skld_pam_plot)
   View(overlap_pam_stats)
   View(overlap_pam_tc_sc_stats)
-  View(model_comparison)
+#  View(model_comparison)
 } else {
   ggsave(
     paste0(PLOTS, "/certaccuracy_by_skld_pam_plot_600.png"),
@@ -333,5 +379,9 @@ if (INTERACTIVE) {
   )
   print(overlap_pam_stats)
   print(overlap_pam_tc_sc_stats)
-  print(model_comparison)
+#  print(model_comparison)
 }
+print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
+               diff_pred_ho, method="spearman", exact=FALSE))
+print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
+               diff_pred_ho*wrongness_ho, method="spearman", exact=FALSE))  
