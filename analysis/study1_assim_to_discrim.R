@@ -345,16 +345,16 @@ models <- foreach(m = names(model_specs),
                  model_specs[[m]][["dvmode"]])
 }
 
-#loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
-#                   models[["ordinal_haskins"]])
+loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
+                   models[["ordinal_haskins"]])
 
-#loo_1c <- loo(models[["sigmoid_1c_null"]],
-#              models[["sigmoid_1c_mct"]],
-#              models[["sigmoid_1c_gd"]],
-#              models[["sigmoid_1c_mct_gd"]])
-#
-#loo_2c <- loo(models[["sigmoid_2c_null"]],
-#              models[["sigmoid_2c_mct"]])
+loo_1c <- loo(models[["sigmoid_1c_null"]],
+              models[["sigmoid_1c_mct"]],
+              models[["sigmoid_1c_gd"]],
+              models[["sigmoid_1c_mct_gd"]])
+
+loo_2c <- loo(models[["sigmoid_2c_null"]],
+              models[["sigmoid_2c_mct"]])
 
 
 haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
