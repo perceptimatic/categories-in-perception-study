@@ -413,10 +413,13 @@ loo_1c <- loo(models[["sigmoid_1c_null"]],
               models[["sigmoid_1c_gd"]],
               models[["sigmoid_1c_mct_gd"]],
               models[["sigmoid_1c_mct_overlap"]],
-              models[["sigmoid_1c_mct_gd_overlap"]])
+              models[["sigmoid_1c_mct_gd_overlap"]],
+              models[["sigmoid_1c_overlap"]])
 
 loo_2c <- loo(models[["sigmoid_2c_null"]],
-              models[["sigmoid_2c_mct"]])
+              models[["sigmoid_2c_mct"]],
+              models[["sigmoid_2c_mct_overlap"]],
+              models[["sigmoid_2c_overlap"]])
 
 
 haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
