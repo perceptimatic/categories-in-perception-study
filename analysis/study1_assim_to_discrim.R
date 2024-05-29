@@ -1,14 +1,7 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 CORES <- as.numeric(Sys.getenv("CPCORES"))
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 GPU <- Sys.getenv("CPGPU")
->>>>>>> 7c3a312 (change analysis for Study 1)
-=======
-GPU <- Sys.getenv("CPGPU")
->>>>>>> 8202882 (change analysis for Study 1)
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
