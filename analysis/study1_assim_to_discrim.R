@@ -235,7 +235,10 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
     d <- mutate(d, `Accuracy and Certainty`=`Accuracy and Certainty`/6 + 0.5)    
   }
   d <- makenamesize(mutate(d,
-       `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2)))
+       `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
+       Overlap=scale(Overlap),
+       `Maximum Categorization Threshold`=scale(`Maximum Categorization Threshold`),
+       `Goodness Difference`=scale(`Goodness Difference`)))
   if (gpuid != "") {
     m <- brm(f, file=filename, data=d,
              save_pars = save_pars(all = TRUE),
