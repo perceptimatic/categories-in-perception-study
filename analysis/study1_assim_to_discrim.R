@@ -1,6 +1,7 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 CORES <- as.numeric(Sys.getenv("CPCORES"))
+GPU <- Sys.getenv("CPGPU")
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
@@ -20,122 +21,7 @@ source(paste0(SCRIPTS, "/cleanup.R"))
 source(paste0(SCRIPTS, "/identification.R"))
 source(paste0(SCRIPTS, "/discrimination.R"))
 source(paste0(SCRIPTS, "/plotting.R"))
-
-makenamesize <- function(d) {
-  names(d) <- make.names(colnames(d))
-  return(d)
-}
-
-smooth <- function(x, eps) {
-  new_max <- 1 - eps * sum(near(x, 0))
-  return(ifelse(near(x, 0), eps, x * new_max))
-}
-
-max_skld <- function(x, eps) {
-  n <- length(x)
-  x1 <- c(rep(eps, n - 1), 1 - eps * (n - 1))
-  x2 <- c(1 - eps * (n - 1), rep(eps, n - 1))
-  k1 <- sum(x1 * log(x1 / x2))
-  k2 <- sum(x2 * log(x2 / x1))
-  return((k1 + k2) / 2.)
-}
-
-haskins_score <- function(ass_tgt, ass_oth, with_p50 = TRUE) {
-  tgt <- unlist(c(ass_tgt))
-  oth <- unlist(c(ass_oth))
-  p <- sum((tgt ^ 2) * (1 - oth))
-  p50 <- 0
-  if (with_p50)
-    p50 <- sum(tgt * (1 - tgt) * (1 - oth)) + sum((tgt ^ 2) * oth)
-  return(as.numeric(p + 0.5 * p50))
-}
-
-assimilation_to_contrast <- function(phones, assimilation, phone_var) {
-  assimilation_p1 <- assimilation %>% rename(`Phone 1` = {{phone_var}}) %>%
-    rename_with(~ paste0(.x, ":Phone 1"), .cols = !`Phone 1`)
-  assimilation_p2 <- assimilation %>% rename(`Phone 2` = {{phone_var}}) %>%
-    rename_with(~ paste0(.x, ":Phone 2"), .cols = !`Phone 2`)
-  contrasts <- crossing(A = phones, B = phones) %>% filter(A != B)  %>%
-    transmute(
-      `Phone 1` = get_phone1(A, B),
-      `Phone 2` = get_phone2(A, B),
-      `Phone Contrast` = contrast_label(`Phone 1`, `Phone 2`)
-    ) %>%
-    unique()
-  contrasts_with_ass <- contrasts %>%
-    left_join(assimilation_p1, by = "Phone 1") %>%
-    left_join(assimilation_p2, by = "Phone 2")
-  return(contrasts_with_ass)
-}
-
-assimilation_to_contrast_grouped <- function(assimilation,
-                                             phone_var,
-                                             value_vars,
-                                             grouping_vars) {
-  assimilation %>%
-    reframe(assimilation_to_contrast(.data[[phone_var]], pick(all_of(
-      c(value_vars, phone_var)
-    )), phone_var),
-    .by = all_of(grouping_vars))
-}
-
-skld_score <- function(ass_tgt, ass_oth, eps) {
-  k <- max_skld(ass_tgt, eps)
-  t <- smooth(ass_tgt, eps)
-  o <- smooth(ass_oth, eps)
-  kld_to <- sum(t * log(t / o))
-  kld_ot <- sum(o * log(o / t))
-  return(1 - (kld_to + kld_ot) / (2. * k))
-}
-
-pam_overlap <- assimilation_vectors %>%
-  pivot_wider(
-    id_cols = c("Phone", "Phone Language (Long)", "Phone Language (Code)"),
-    names_from = c("Listener Group", "Response"),
-    values_from = c("Proportion of Responses", "Goodness")
-  ) %>%
-  nest(
-    `Assimilation:English` = starts_with("Proportion of Responses_English_"),
-    `Assimilation:French` = starts_with("Proportion of Responses_French_"),
-    `Goodness:English` = starts_with("Goodness_English_"),
-    `Goodness:French` = starts_with("Goodness_French_")
-  ) %>%
-  pivot_longer(
-    starts_with("Assimilation") | starts_with("Goodness"),
-    names_pattern = "(.*):(.*)",
-    names_to = c(".value", "Listener Group")
-  ) %>%
-  mutate(
-    `Top Percentage` = map_dbl(Assimilation, ~ .x[[max.col(.x)]]),
-    `Top Goodness` = map2_dbl(Assimilation, Goodness, ~ .y[[max.col(.x)]]),
-    `Top Choice` = map_chr(Assimilation, ~ str_split_i(colnames(.x)[max.col(.x)], "_", 3))
-  ) %>%
-  assimilation_to_contrast_grouped(
-    "Phone",
-    c("Assimilation", "Top Goodness", "Top Choice", "Top Percentage"),
-    c(
-      "Listener Group",
-      "Phone Language (Long)",
-      "Phone Language (Code)"
-    )
-  ) %>%
-  mutate(`Phone Contrast (Language)` = paste0(`Phone Contrast`, " (", `Phone Language (Code)`, ")")) %>%
-  mutate(
-    `Goodness Difference` = abs(`Top Goodness:Phone 1` - `Top Goodness:Phone 2`),
-    Overlap = map2_dbl(
-      `Assimilation:Phone 1`,
-      `Assimilation:Phone 2`,
-      ~ skld_score(unlist(.x), unlist(.y), 0.001)
-    ),
-    Dot = map2_dbl(`Assimilation:Phone 1`, `Assimilation:Phone 2`, ~ sum(.x * .y)),
-    Haskins = map2_dbl(
-      `Assimilation:Phone 1`,
-      `Assimilation:Phone 2`,
-      ~ 1 - 0.5 * (haskins_score(.x, .y) + haskins_score(.y, .x))
-    ),
-    `Maximum Categorization Threshold` = map2_dbl(`Top Percentage:Phone 1`, `Top Percentage:Phone 2`, min),
-    `Same Top Choice` = map2_chr(`Top Choice:Phone 1`, `Top Choice:Phone 2`, ~ c("No", "Yes")[(.x == .y) + 1])
-  )
+source(paste0(SCRIPTS, "/regression.R"))
 
 discr_by_contrast_pam_overlap <- left_join(
   discriminability_by_contrast,
@@ -210,57 +96,8 @@ discr_pam_overlap <- left_join(
   )
 )
 
-get_filename <- function(model_name) {
-  return(paste0(MODELS, "/model_", model_name))
-}
-
-run_brms_model <- function(f, d, filename, gpuid, dvmode) {
-  if (dvmode == "ordered") {
-    d <- mutate(d,
-                `Accuracy and Certainty` = factor(`Accuracy and Certainty`, ordered = TRUE))
-    family <- "cumulative"
-  } else if (dvmode == "binarized") {
-    d <- mutate(d, `Accuracy and Certainty` = `Accuracy and Certainty` / 6 + 0.5)
-    family <- gaussian(link = "logit")
-  }
-  d <- makenamesize(
-    mutate(
-      d,
-      `Listener Group` = ifelse(`Listener Group` == "English", -1 / 2, 1 /
-                                  2),
-      `Maximum Categorization Threshold` = (`Maximum Categorization Threshold` -
-                                              0.5) / 0.1,
-      `Goodness Difference` = (
-        `Goodness Difference` - mean(discr_pam_overlap$`Goodness Difference`)
-      ) /
-        sd(discr_pam_overlap$`Goodness Difference`),
-      Haskins = 2 * Haskins
-    )
-  )
-  if (gpuid != "") {
-    m <- brm(
-      f,
-      file = filename,
-      data = d,
-      family = family,
-      save_pars = save_pars(all = TRUE),
-      backend = "cmdstanr",
-      opencl = eval(parse(text = gpuid)),
-      stan_model_args = list(stanc_options = list("O1"))
-    )
-  } else {
-    m <- brm(
-      f,
-      file = filename,
-      data = d,
-      family = family,
-      save_pars = save_pars(all = TRUE),
-      backend = "cmdstanr",
-      stan_model_args = list(stanc_options = list("O1"))
-    )
-  }
-  return(m)
-}
+goodness_difference_mean <- mean(discr_pam_overlap$`Goodness Difference`)
+goodness_difference_sd <- sd(discr_pam_overlap$`Goodness Difference`)
 
 model_specs <- list(
   ordinal_null = list(
@@ -356,7 +193,9 @@ models <- foreach(
                  discr_pam_overlap[model_specs[[m]][["subset"]], ],
                  get_filename(m),
                  GPU,
-                 model_specs[[m]][["dvmode"]])
+                 model_specs[[m]][["dvmode"]],
+                 goodness_difference_mean,
+                 goodness_difference_sd)
 }
 
 models <- foreach(
@@ -521,7 +360,8 @@ mct_overlap_gd_plot <- foreach(pred=list(c("Overlap"),
         factor(`Maximum Categorization Threshold` * 0.1 + 0.5),
       `Predicted Accuracy and Certainty` = (`Predicted Accuracy and Certainty` -
                                               0.5) * 6,
-      `Goodness Difference` = `Goodness Difference` * 0.31 + 0.39,
+      `Goodness Difference` = `Goodness Difference` * goodness_difference_sd +
+        goodness_difference_mean,
       conf.low = (conf.low - 0.5) * 6,
       conf.high = (conf.high - 0.5) * 6
     ) %>%
