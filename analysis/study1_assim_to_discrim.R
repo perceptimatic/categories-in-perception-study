@@ -387,8 +387,12 @@ if (INTERACTIVE) {
   print(overlap_pam_stats)
   print(overlap_pam_tc_sc_stats)
 }
+print(models)
+print(loo_overlap)
+print(loo_1c)
+print(loo_2c)
+
 print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
                diff_pred_ho, method="spearman", exact=FALSE))
 print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
                diff_pred_ho*wrongness_ho, method="spearman", exact=FALSE))  
-print(models)
