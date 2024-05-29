@@ -276,7 +276,7 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
   }
   d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
-       `Maximum Categorization Threshold`=`Maximum Categorization Threshold`-0.5,
+       `Maximum Categorization Threshold`=(`Maximum Categorization Threshold`-0.5)/0.1,
        Haskins=2*Haskins))
   if (gpuid != "") {
     m <- brm(f, file=filename, data=d,
