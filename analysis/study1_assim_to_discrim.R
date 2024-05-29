@@ -295,7 +295,7 @@ run_brms_model <- function(f, d, filename, gpuid, prior=NULL) {
     m <- brm(f, family="cumulative", file=filename, data=d,
              save_pars = save_pars(all = TRUE),
 	           backend="cmdstanr",
-             opencl=eval(parse(gpuid)),
+             opencl=eval(parse(text=gpuid)),
 	           stan_model_args = list(stanc_options = list("O1")),
              prior=prior)
   } else {
@@ -324,6 +324,7 @@ models <- foreach(m = names(model_specs),
   run_brms_model(model_specs[[m]][["formula"]],
                  discr_pam_overlap[model_specs[[m]][["subset"]],],
                  get_filename(m),
+                 GPU,
                  model_specs[[m]][["prior"]])
 }
 
