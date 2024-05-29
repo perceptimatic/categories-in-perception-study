@@ -286,26 +286,27 @@ get_filename <- function(model_name) {
   return(paste0(MODELS, "/model_", model_name))
 }
 
-run_brms_model <- function(f, d, filename, gpuid, prior=NULL) {
-  d <- makenamesize(mutate(
-    d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
-                                       ordered=TRUE),
+run_brms_model <- function(f, d, filename, gpuid, dvmode) {
+  if (dvmode == "ordered") {
+    d <- mutate(d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
+                                                   ordered=TRUE))
+  } else if (dvmode == "binarized") {
+    d <- mutate(d, `Accuracy and Certainty`=`Accuracy and Certainty`/6 + 0.5)    
+  }
+  d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2)))
   if (gpuid != "") {
-    m <- brm(f, family="cumulative", file=filename, data=d,
+    m <- brm(f, file=filename, data=d,
              save_pars = save_pars(all = TRUE),
 	           backend="cmdstanr",
              opencl=eval(parse(text=gpuid)),
-	           stan_model_args = list(stanc_options = list("O1")),
-             prior=prior)
+	           stan_model_args = list(stanc_options = list("O1")))
   } else {
-    m <- brm(f, family="cumulative", file=filename, data=d,
+    m <- brm(f, file=filename, data=d,
              save_pars = save_pars(all = TRUE),
 	           backend="cmdstanr",
-	           stan_model_args = list(stanc_options = list("O1")),
-             prior=prior)    
+	           stan_model_args = list(stanc_options = list("O1")))    
   }
-  m <- add_criterion(m, "waic")
   return(m)
 }
 
@@ -313,33 +314,78 @@ model_specs <- list(
   ordinal_null=list(
     formula=formula("Accuracy.and.Certainty ~
                     Listener.Group + 
-                    (1|Participant) + (1 + Listener.Group|filename)"),
+                    (1|Participant) + (1 + Listener.Group|filename)",
+                    family="cumulative"),
     subset=TRUE,
-    prior=NULL
+    dvmode="ordered"
   ),
   ordinal_overlap=list(
     formula=formula("Accuracy.and.Certainty ~
                     Overlap + Listener.Group + Overlap:Listener.Group +
-                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)"),
+                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)",
+                    family="cumulative"),
     subset=TRUE,
-    prior=NULL
+    dvmode="ordered"
   ),
   ordinal_haskins=list(
     formula=formula("Accuracy.and.Certainty ~
                     Haskins + Listener.Group + Haskins:Listener.Group +
-                    (1 + Haskins|Participant) + (1 + Listener.Group|filename)"),
+                    (1 + Haskins|Participant) + (1 + Listener.Group|filename)",
+                    family="cumulative"),
     subset=TRUE,
-    prior=NULL
+    dvmode="ordered"
+  ),
+  sigmoid_1c_null=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + 
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),
+  sigmoid_2c_null=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + 
+                         (1|Participant) + (1 + Listener.Group|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "No",
+    dvmode="binarized"
+  ),
+  sigmoid_1c_mct=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + Maximum.Categorization.Threshold +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),
+  sigmoid_1c_gd=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + Goodness.Difference +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),  
+  sigmoid_1c_mct_gd=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group +
+                         Maximum.Categorization.Threshold*Goodness.Difference +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
   )
 )
 
+
 models <- foreach(m = names(model_specs),
                   .final = function(x) setNames(x, names(model_specs))) %do% {
-  run_brms_model(model_specs[[m]][["formula"]],
+  model <- run_brms_model(model_specs[[m]][["formula"]],
                  discr_pam_overlap[model_specs[[m]][["subset"]],],
                  get_filename(m),
                  GPU,
-                 model_specs[[m]][["prior"]])
+                 model_specs[[m]][["dvmode"]])
 }
 
 #regression_model_meta <- tibble(
@@ -381,6 +427,8 @@ overlap_lm <- lm(`Accuracy and Certainty` ~ Overlap,
 diff_pred_ho <- predict(haskins_lm) - predict(overlap_lm)
 wrongness_ho <- abs(resid(haskins_lm)) - abs(resid(overlap_lm))
 
+
+
 print(cor.test(discr_by_contrast_pam_overlap$`Goodness Difference`,
                1-discr_by_contrast_pam_overlap$`Overlap`,
                method="spearman", exact=FALSE))
@@ -408,3 +456,4 @@ print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
                diff_pred_ho, method="spearman", exact=FALSE))
 print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
                diff_pred_ho*wrongness_ho, method="spearman", exact=FALSE))  
+print(models)
