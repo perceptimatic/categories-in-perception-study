@@ -292,7 +292,8 @@ get_filename <- function(model_name) {
 run_brms_model <- function(f, d, filename, prior=NULL) {
   d <- makenamesize(mutate(
     d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
-                                       ordered=TRUE)))
+                                       ordered=TRUE),
+       `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2)))
   m <- brm(f, family="cumulative", file=filename, data=d,
            save_pars = save_pars(all = TRUE), iter=3000,
 	         backend="cmdstanr", threads=threading(STAN_THREADS),
