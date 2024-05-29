@@ -9,6 +9,7 @@ MODELS <- paste0(TOP, "/analysis")
 Sys.setlocale(locale="en_US.UTF-8")
 library(tidyverse)
 library(brms)
+library(marginaleffects)
 library(foreach)
 
 options(mc.cores=CORES)
@@ -227,6 +228,42 @@ get_filename <- function(model_name) {
   return(paste0(MODELS, "/model_", model_name))
 }
 
+clean_predictions <- function(predictions, d, dvmode, factorvars,
+                              rescalevars) {
+  for (var in unique(c(factorvars, rescalevars,
+                       "Accuracy and Certainty",
+                       "Listener Group"))) {
+    mnvar <- make.names(var)
+    predictions[[var]] <- predictions[[mnvar]]
+  }
+  if (dvmode == "binarized") {
+    predictions <- mutate(
+      predictions,
+      estimate=(estimate - 0.5)*6,
+      conf.low=(conf.low - 0.5)*6,
+      conf.high=(conf.high - 0.5)*6,
+      `Accuracy and Certainty`=(`Accuracy and Certainty` - 0.5)*6)
+  } else if (dvmode == "collapse_ordinal") {
+    predictions
+  }
+  for (var in factorvars) {
+    predictions[[var]] <- as.numeric(as.character(predictions[[var]]))
+  }
+  predictions <- mutate(
+    predictions,  
+    `Listener Group`=ifelse(`Listener Group` == -0.5, "English", "French")
+  )
+  for (var in rescalevars) {
+    s <- attr(scale(d[[var]]), "scaled:scale")
+    m <- attr(scale(d[[var]]), "scaled:center")
+    predictions[[var]] <- predictions[[var]]*s + m
+  }
+  for (var in factorvars) {
+    predictions[[var]] <- factor(format(predictions[[var]], digits=2))
+  }
+  return(predictions)
+}
+
 run_brms_model <- function(f, d, filename, gpuid, dvmode) {
   if (dvmode == "ordered") {
     d <- mutate(d, `Accuracy and Certainty`=factor(`Accuracy and Certainty`,
@@ -239,6 +276,7 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
   d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
        Overlap=scale(Overlap),
+       Haskins=scale(Haskins),
        `Maximum Categorization Threshold`=scale(`Maximum Categorization Threshold`),
        `Goodness Difference`=scale(`Goodness Difference`)))
   if (gpuid != "") {
@@ -432,6 +470,46 @@ loo_2c <- loo(models[["sigmoid_2c_null"]],
               models[["sigmoid_2c_overlap"]])
 
 
+plot_pam_1c <- ggplot(
+  clean_predictions(
+    plot_predictions(
+      models$sigmoid_1c_mct_gd_overlap,
+      condition=c("Goodness.Difference", 
+                  "Maximum.Categorization.Threshold",
+                  "Listener.Group"),
+      draw=FALSE),
+    discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "Yes",],
+    "binarized", "Maximum Categorization Threshold") %>%
+    rename(`Estimated Accuracy and Certainty`=estimate),
+  aes(x=`Goodness Difference`,
+      y=`Estimated Accuracy and Certainty`,
+      linetype=`Maximum Categorization Threshold`)) +
+  geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
+  geom_line() + facet_grid(~ `Listener Group`) +
+  scale_linetype_manual(
+    values=c(`0.77`=1, `0.68`=5, `0.60`=2, `0.46`=4, `0.34`=3)) +
+  cp_theme()
+
+plot_pam_overlap_1c <- ggplot(
+  clean_predictions(
+    plot_predictions(
+      models$sigmoid_1c_mct_gd_overlap,
+      condition=c("Overlap", 
+                  "Maximum.Categorization.Threshold",
+                  "Listener.Group"),
+      draw=FALSE),
+    discr_pam_overlap[discr_pam_overlap$`Same Top Choice` == "Yes",],
+    "binarized", "Maximum Categorization Threshold") %>%
+    rename(`Estimated Accuracy and Certainty`=estimate),
+  aes(x=`Overlap`,
+      y=`Estimated Accuracy and Certainty`,
+      linetype=`Maximum Categorization Threshold`)) +
+  geom_ribbon(aes(ymin=conf.low, ymax=conf.high), alpha=0.1) +
+  geom_line() + facet_grid(~ `Listener Group`) +
+  scale_linetype_manual(
+    values=c(`0.77`=1, `0.68`=5, `0.60`=2, `0.46`=4, `0.34`=3)) +
+  cp_theme()
+
 haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
                                data=discr_by_contrast_pam_overlap)
 haskins_lm <- lm(`Accuracy and Certainty` ~ Haskins,
@@ -448,6 +526,7 @@ print(cor.test(discr_by_contrast_pam_overlap$`Goodness Difference`,
 if (INTERACTIVE) {
   print(certaccuracy_by_skld_plot)
   print(certaccuracy_by_skld_pam_plot)
+  print(plot_pam_1c)
   View(overlap_pam_stats)
   View(overlap_pam_tc_sc_stats)
 } else {
