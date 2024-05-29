@@ -305,6 +305,18 @@ model_specs <- list(
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
+  sigmoid_1c_gd_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + Maximum.Categorization.Threshold +
+                         Listener.Group:Maximum.Categorization.Threshold +
+                         Goodness.Difference +
+                         Goodness.Difference:Maximum.Categorization.Threshold +
+                         Listener.Group:Overlap +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),
   sigmoid_1c_gd=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Goodness.Difference +
