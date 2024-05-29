@@ -6,9 +6,6 @@ SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
 
-args <- commandArgs(trailingOnly = TRUE)
-#model_to_run <- as.integer(args[1])
-
 Sys.setlocale(locale="en_US.UTF-8")
 library(tidyverse)
 library(brms)
@@ -295,18 +292,19 @@ run_brms_model <- function(f, d, filename, prior=NULL) {
                                        ordered=TRUE),
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2)))
   m <- brm(f, family="cumulative", file=filename, data=d,
-           save_pars = save_pars(all = TRUE), iter=3000,
+           save_pars = save_pars(all = TRUE),
 	         backend="cmdstanr", threads=threading(STAN_THREADS),
 	         stan_model_args = list(stanc_options = list("O1")),
            prior=prior)
-  m <- add_criterion(m, "loo")
+  m <- add_criterion(m, "waic")
   return(m)
 }
 
 model_specs <- list(
   ordinal_null=list(
-    formula=formula("Accuracy.and.Certainty ~ Listener.Group + (1|Participant) +
-    (1 + Listener.Group|filename)"),
+    formula=formula("Accuracy.and.Certainty|thresh(gr=Participant) ~
+                    Listener.Group + 
+                    (1|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     prior=NULL
   )
