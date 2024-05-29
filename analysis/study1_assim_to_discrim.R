@@ -316,6 +316,20 @@ model_specs <- list(
                     (1|Participant) + (1 + Listener.Group|filename)"),
     subset=TRUE,
     prior=NULL
+  ),
+  ordinal_overlap=list(
+    formula=formula("Accuracy.and.Certainty ~
+                    Overlap + Listener.Group + Overlap:Listener.Group +
+                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)"),
+    subset=TRUE,
+    prior=NULL
+  ),
+  ordinal_haskins=list(
+    formula=formula("Accuracy.and.Certainty ~
+                    Haskins + Listener.Group + Haskins:Listener.Group +
+                    (1 + Haskins|Participant) + (1 + Listener.Group|filename)"),
+    subset=TRUE,
+    prior=NULL
   )
 )
 
