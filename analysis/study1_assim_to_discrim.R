@@ -318,7 +318,7 @@ model_specs <- list(
   sigmoid_2c_null=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + 
-                         (1|Participant) + (1 + Listener.Group|filename)",
+                         (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
@@ -328,7 +328,7 @@ model_specs <- list(
                          Listener.Group +
                          Maximum.Categorization.Threshold + 
                          Maximum.Categorization.Threshold:Listener.Group +
-                         (1|Participant) + (1 + Listener.Group|filename)",
+                         (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
