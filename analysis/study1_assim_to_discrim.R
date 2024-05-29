@@ -345,6 +345,8 @@ models <- foreach(m = names(model_specs),
                  model_specs[[m]][["dvmode"]])
 }
 
+foreach(m = names(model_specs)) %do% { add_criterion(models[[m]], "loo") }
+
 loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
                    models[["ordinal_haskins"]])
 
