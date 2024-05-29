@@ -346,6 +346,7 @@ model_specs <- list(
                          Maximum.Categorization.Threshold:Listener.Group +
                          Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
                          Overlap:Maximum.Categorization.Threshold +
+                         Overlap:Maximum.Categorization.Threshold:Goodness.Difference +
                          Overlap:Goodness.Difference +
                          (1|Participant) + (1|filename)"),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
