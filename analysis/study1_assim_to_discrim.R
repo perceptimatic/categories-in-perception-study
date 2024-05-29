@@ -293,6 +293,17 @@ model_specs <- list(
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
+  sigmoid_1c_mct_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + Maximum.Categorization.Threshold +
+                         Listener.Group:Maximum.Categorization.Threshold +
+                         Overlap +
+                         Listener.Group:Overlap +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),
   sigmoid_1c_gd=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Goodness.Difference +
@@ -308,6 +319,20 @@ model_specs <- list(
                          Maximum.Categorization.Threshold + Goodness.Difference +
                          Maximum.Categorization.Threshold:Goodness.Difference +
                          Listener.Group:Goodness.Difference +
+                         Maximum.Categorization.Threshold:Listener.Group +
+                         Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),  
+  sigmoid_1c_mct_gd_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group +
+                         Maximum.Categorization.Threshold + Goodness.Difference +
+                         Maximum.Categorization.Threshold:Goodness.Difference +
+                         Listener.Group:Goodness.Difference +
+                         Overlap + Listener.Group:Overlap +
                          Maximum.Categorization.Threshold:Listener.Group +
                          Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
                          (1|Participant) + (1|filename)",
@@ -332,6 +357,18 @@ model_specs <- list(
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
+  ),
+  sigmoid_2c_mct_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group +
+                         Maximum.Categorization.Threshold + 
+                         Maximum.Categorization.Threshold:Listener.Group +
+                         Overlap + 
+                         Overlap:Listener.Group +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "No",
+    dvmode="binarized"
   )
 )
 
@@ -345,7 +382,9 @@ models <- foreach(m = names(model_specs),
                  model_specs[[m]][["dvmode"]])
 }
 
-foreach(m = names(model_specs)) %do% { add_criterion(models[[m]], "loo") }
+foreach(m = names(model_specs)) %do% {
+  add_criterion(models[[m]], "loo", file=m)
+}
 
 loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
                    models[["ordinal_haskins"]])
