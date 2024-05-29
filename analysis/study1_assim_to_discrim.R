@@ -345,6 +345,13 @@ model_specs <- list(
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),  
+  sigmoid_1c_gd_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Overlap*Goodness.Difference*Listener.Group +
+                         (1|Participant) + (1|filename)"),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),  
   sigmoid_1c_mct_gd_overlap=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Overlap*Maximum.Categorization.Threshold*Goodness.Difference*Listener.Group -
@@ -408,6 +415,11 @@ models <- foreach(m = names(model_specs),
 loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]])
 loo_haskins <- loo(models[["ordinal_null"]], models[["ordinal_haskins"]])
 loo_haskins_overlap <- loo(models[["ordinal_overlap"]], models[["ordinal_haskins"]])
+
+loo(models[["sigmoid_1c_mct"]], models[["sigmoid_1c_null"]])
+loo(models[["sigmoid_2c_mct"]], models[["sigmoid_2c_null"]])
+loo(models[["sigmoid_1c_mct_overlap"]], models[["sigmoid_1c_overlap"]])
+loo(models[["sigmoid_2c_mct_overlap"]], models[["sigmoid_2c_overlap"]])
 
 
 loo_1c <- loo(models[["sigmoid_1c_null"]],
