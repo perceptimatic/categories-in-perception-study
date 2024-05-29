@@ -354,6 +354,7 @@ model_specs <- list(
   sigmoid_1c_mct=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Maximum.Categorization.Threshold +
+                         Listener.Group:Maximum.Categorization.Threshold +
                          (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
@@ -362,6 +363,7 @@ model_specs <- list(
   sigmoid_1c_gd=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Goodness.Difference +
+                         Listener.Group:Goodness.Difference +
                          (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
@@ -370,7 +372,11 @@ model_specs <- list(
   sigmoid_1c_mct_gd=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group +
-                         Maximum.Categorization.Threshold*Goodness.Difference +
+                         Maximum.Categorization.Threshold + Goodness.Difference +
+                         Maximum.Categorization.Threshold:Goodness.Difference +
+                         Listener.Group:Goodness.Difference +
+                         Maximum.Categorization.Threshold:Listener.Group +
+                         Listener.Group:Maximum.Categorization.Threshold:Goodness.Difference +
                          (1|Participant) + (1|filename)",
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
