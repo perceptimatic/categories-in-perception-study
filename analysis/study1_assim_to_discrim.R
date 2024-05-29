@@ -1,7 +1,6 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 CORES <- as.numeric(Sys.getenv("CPCORES"))
-STAN_THREADS <- as.numeric(Sys.getenv("CPTHREADS"))
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
@@ -293,7 +292,7 @@ run_brms_model <- function(f, d, filename, prior=NULL) {
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2)))
   m <- brm(f, family="cumulative", file=filename, data=d,
            save_pars = save_pars(all = TRUE),
-	         backend="cmdstanr", threads=threading(STAN_THREADS),
+	         backend="cmdstanr",
 	         stan_model_args = list(stanc_options = list("O1")),
            prior=prior)
   m <- add_criterion(m, "waic")
