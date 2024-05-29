@@ -212,61 +212,6 @@ overlap_pam_tc_sc_stats <- discr_by_contrast_pam_overlap %>%
     .by = c("Same Top Choice", "Listener Group")
   )
     
-#    ,
-#    `Cor with threshold` = cor(`Maximum Categorization Threshold`,
-#                               `Accuracy and Certainty`, method = "spearman"),
-#    `GLM Threshold-only` = list(glm(
-#      `Accuracy and Certainty`/3 ~ rank(`Maximum Categorization Threshold`),
-#      family=gaussian(link="logit")
-#    )),
-#   `GLM Threshold + Overlap` = list(glm(
-#      `Accuracy and Certainty`/3 ~
-#        rank(`Maximum Categorization Threshold`) + `Overlap`,
-#        family=gaussian(link="logit")
-#    )),
-#    `Cor with GD` = cor(`Goodness Difference`,
-#      `Accuracy and Certainty`,
-#      method = "spearman"
-#    ),
-#    `GLM GD-only` = list(glm(
-#      `Accuracy and Certainty`/3 ~ rank(`Goodness Difference`),
-#      family=gaussian(link="logit")
-#    )),
-#    `GLM GD + Overlap` = list(glm(
-#      `Accuracy and Certainty`/3 ~ rank(`Goodness Difference`) + Overlap, 
-#      family=gaussian(link="logit")
-#    )),
-#    .by = c("Same Top Choice", "Listener Group")
-#  ) %>%
-#  mutate(`GLM Threshold-only >0 pval`=map_dbl(`GLM Threshold-only`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=FALSE)),
-#         `GLM Threshold-only <0 pval`=map_dbl(`GLM Threshold-only`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=TRUE)),
-#         `GLM Threshold + Overlap >0 pval`=map_dbl(`GLM Threshold + Overlap`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=FALSE)),
-#         `GLM Threshold + Overlap <0 pval`=map_dbl(`GLM Threshold + Overlap`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=TRUE)),
-#         `GLM Overlap + Threshold <0 pval`=map_dbl(`GLM Threshold + Overlap`,
-#                                          ~ pt(coef(summary(.x))[3,3],
-#                                               .x$df.residual, lower=TRUE)),
-#         `GLM GD-only >0 pval`=map_dbl(`GLM GD-only`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=FALSE)),
-#         `GLM GD-only <0 pval`=map_dbl(`GLM GD-only`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=TRUE)),
-#         `GLM GD + Overlap >0 pval`=map_dbl(`GLM GD + Overlap`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=FALSE)),
-#         `GLM GD + Overlap <0 pval`=map_dbl(`GLM GD + Overlap`,
-#                                          ~ pt(coef(summary(.x))[2,3],
-#                                               .x$df.residual, lower=TRUE))
-#         )
-
 discr_pam_overlap <- left_join(
     discrimination,
     pam_overlap,
@@ -277,10 +222,6 @@ discr_pam_overlap <- left_join(
       "Phone Contrast (Language)"
     )
   )
-
-#get_filename <- function(listener, predictor) {
-#  return(paste0(MODELS, "/model_", listener, "_", predictor))
-#}
 
 get_filename <- function(model_name) {
   return(paste0(MODELS, "/model_", model_name))
@@ -343,14 +284,6 @@ model_specs <- list(
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
-  sigmoid_2c_null=list(
-    formula=brmsformula("Accuracy.and.Certainty ~
-                         Listener.Group + 
-                         (1|Participant) + (1 + Listener.Group|filename)",
-                        family=gaussian(link="logit")),
-    subset=discr_pam_overlap$`Same Top Choice` == "No",
-    dvmode="binarized"
-  ),
   sigmoid_1c_mct=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + Maximum.Categorization.Threshold +
@@ -381,6 +314,24 @@ model_specs <- list(
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
+  ),
+  sigmoid_2c_null=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + 
+                         (1|Participant) + (1 + Listener.Group|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "No",
+    dvmode="binarized"
+  ),
+  sigmoid_2c_mct=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group +
+                         Maximum.Categorization.Threshold + 
+                         Maximum.Categorization.Threshold:Listener.Group +
+                         (1|Participant) + (1 + Listener.Group|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "No",
+    dvmode="binarized"
   )
 )
 
@@ -394,35 +345,17 @@ models <- foreach(m = names(model_specs),
                  model_specs[[m]][["dvmode"]])
 }
 
-#regression_model_meta <- tibble(
-#  `Listener Group`=c(rep("French", 2), rep("English", 2)),
-#  Predictor=rep(c("Overlap", "Haskins"), 2),
-#  Formula=map(Predictor, ~ formula(paste0(
-#    "Accuracy.and.Certainty ~ ", .x, " + (1+", .x, "|Participant) + (1|filename)"))),
-#  Filename=get_filename(`Listener Group`, Predictor)
-#)
+#loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
+#                   models[["ordinal_haskins"]])
 
-#f <- regression_model_meta$Formula[[model_to_run]]
-#l <- regression_model_meta$`Listener Group`[[model_to_run]]
-#fn <- regression_model_meta$Filename[[model_to_run]]
-#run_brms_model(f, filter(discr_pam_overlap, `Listener Group` == l), fn)
-#stop()
+#loo_1c <- loo(models[["sigmoid_1c_null"]],
+#              models[["sigmoid_1c_mct"]],
+#              models[["sigmoid_1c_gd"]],
+#              models[["sigmoid_1c_mct_gd"]])
+#
+#loo_2c <- loo(models[["sigmoid_2c_null"]],
+#              models[["sigmoid_2c_mct"]])
 
-#regression_models <- regression_model_meta %>%
-#  mutate(Model=pmap(list(Formula, `Listener Group`, Filename),
-#                    \(f,l,fn) run_brms_model(
-#                      f, filter(discr_pam_overlap, `Listener Group` == l), fn
-#                    )))
-
-#model_comparison <- pivot_wider(
-#  regression_models, id_cols=`Listener Group`, names_from=Predictor,
-#  values_from=Model) %>%
-#  mutate(Loo=map2(Overlap, Haskins, loo_compare),
-#         ELPD_Overlap=map_dbl(Loo, ~ .x[1,3]),
-#         ELPD_Haskins=map_dbl(Loo, ~ .x[2,3]),
-#         ELPD_Diff=map_dbl(Loo, ~ .x[2,1]),
-#         ELPD_SEDiff=map_dbl(Loo, ~.x[2,2])) %>%
-#  select(-Overlap, -Haskins)
 
 haskins_overlap_relation <- lm(Haskins ~ Overlap - 1,
                                data=discr_by_contrast_pam_overlap)
@@ -433,8 +366,6 @@ overlap_lm <- lm(`Accuracy and Certainty` ~ Overlap,
 diff_pred_ho <- predict(haskins_lm) - predict(overlap_lm)
 wrongness_ho <- abs(resid(haskins_lm)) - abs(resid(overlap_lm))
 
-
-
 print(cor.test(discr_by_contrast_pam_overlap$`Goodness Difference`,
                1-discr_by_contrast_pam_overlap$`Overlap`,
                method="spearman", exact=FALSE))
@@ -444,7 +375,6 @@ if (INTERACTIVE) {
   print(certaccuracy_by_skld_pam_plot)
   View(overlap_pam_stats)
   View(overlap_pam_tc_sc_stats)
-#  View(model_comparison)
 } else {
   ggsave(
     paste0(PLOTS, "/certaccuracy_by_skld_pam_plot_600.png"),
@@ -456,7 +386,6 @@ if (INTERACTIVE) {
   )
   print(overlap_pam_stats)
   print(overlap_pam_tc_sc_stats)
-#  print(model_comparison)
 }
 print(cor.test(discr_by_contrast_pam_overlap$`Maximum Categorization Threshold`,
                diff_pred_ho, method="spearman", exact=FALSE))
