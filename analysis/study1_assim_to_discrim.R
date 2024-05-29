@@ -122,8 +122,8 @@ pam_overlap <- assimilation_vectors %>%
   ) %>%
   mutate(`Phone Contrast (Language)` = paste0(`Phone Contrast`, " (", `Phone Language (Code)`, ")")) %>%
   mutate(
-    `Goodness Difference` = abs(`Top Goodness:Phone 1` -
-                                  `Top Goodness:Phone 2`),
+    `Goodness Difference` = scale(abs(`Top Goodness:Phone 1` -
+                                  `Top Goodness:Phone 2`)),
     Overlap = map2_dbl(
       `Assimilation:Phone 1`,
       `Assimilation:Phone 2`,
@@ -273,13 +273,10 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
     d <- mutate(d, `Accuracy and Certainty`=`Accuracy and Certainty`/6 + 0.5)    
     family <- gaussian(link="logit")
   }
+  print(mean(d$`Goodness Difference`))
   d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
-#       Overlap=scale(Overlap),
-       #Haskins=scale(Haskins),
-       #`Maximum Categorization Threshold`=scale(`Maximum Categorization Threshold`),
-       #`Goodness Difference`=scale(`Goodness Difference`)
-))
+       `Maximum Categorization Threshold`=`Maximum Categorization Threshold`-0.5))
   if (gpuid != "") {
     m <- brm(f, file=filename, data=d,
              family=family,
@@ -399,7 +396,7 @@ models <- foreach(m = names(model_specs),
                  get_filename(m),
                  GPU,
                  model_specs[[m]][["dvmode"]])
-}
+                  }
 
 models <- foreach(m = names(model_specs),
                   .final = function(x) setNames(x, names(model_specs))) %do% {
