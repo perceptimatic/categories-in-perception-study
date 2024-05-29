@@ -238,7 +238,6 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode) {
   }
   d <- makenamesize(mutate(d,
        `Listener Group`=ifelse(`Listener Group` == "English", -1/2, 1/2),
-       Overlap=scale(Overlap),
        `Maximum Categorization Threshold`=scale(`Maximum Categorization Threshold`),
        `Goodness Difference`=scale(`Goodness Difference`)))
   if (gpuid != "") {
