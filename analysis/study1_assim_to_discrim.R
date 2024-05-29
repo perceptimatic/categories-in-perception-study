@@ -340,6 +340,15 @@ model_specs <- list(
     subset=discr_pam_overlap$`Same Top Choice` == "Yes",
     dvmode="binarized"
   ),
+  sigmoid_1c_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group + Overlap +
+                         Listener.Group:Overlap +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "Yes",
+    dvmode="binarized"
+  ),
   sigmoid_2c_null=list(
     formula=brmsformula("Accuracy.and.Certainty ~
                          Listener.Group + 
@@ -369,6 +378,16 @@ model_specs <- list(
                         family=gaussian(link="logit")),
     subset=discr_pam_overlap$`Same Top Choice` == "No",
     dvmode="binarized"
+  ),
+  sigmoid_2c_overlap=list(
+    formula=brmsformula("Accuracy.and.Certainty ~
+                         Listener.Group +
+                         Overlap + 
+                         Overlap:Listener.Group +
+                         (1|Participant) + (1|filename)",
+                        family=gaussian(link="logit")),
+    subset=discr_pam_overlap$`Same Top Choice` == "No",
+    dvmode="binarized"
   )
 )
 
@@ -392,7 +411,9 @@ loo_overlap <- loo(models[["ordinal_null"]], models[["ordinal_overlap"]],
 loo_1c <- loo(models[["sigmoid_1c_null"]],
               models[["sigmoid_1c_mct"]],
               models[["sigmoid_1c_gd"]],
-              models[["sigmoid_1c_mct_gd"]])
+              models[["sigmoid_1c_mct_gd"]],
+              models[["sigmoid_1c_mct_overlap"]],
+              models[["sigmoid_1c_mct_gd_overlap"]])
 
 loo_2c <- loo(models[["sigmoid_2c_null"]],
               models[["sigmoid_2c_mct"]])
