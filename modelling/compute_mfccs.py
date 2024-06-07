@@ -40,7 +40,7 @@ def transform_and_save(filename_in, filename_out, features):
     if features == 'mfccs':
         spect = compute_mfccs(filename_in)
         np.save(filename_out, spect)
-    else if features == 'melfilterbanks':
+    elif features == 'melfilterbanks':
         spect = compute_melfilterbanks(filename_in)
         np.save(filename_out, spect)
     else:
