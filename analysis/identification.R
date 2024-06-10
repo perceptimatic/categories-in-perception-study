@@ -11,36 +11,8 @@ read_id <- function(id_filename) {
       .default = col_character()
     )
   ) %>%
-    rename(
-      Participant = individual,
-      Goodness = grade,
-      Response = assimilation,
-      `Trial Number` = nb_stimuli,
-      `Listener Group` = language_indiv,
-      `Phone Language (Code)` = language_stimuli,
-      Phone = `#phone`
-    ) %>%
-    mutate(
-      `Listener Group`=str_to_title(`Listener Group`),
-      Participant =
-        paste0(
-          "IDPart",
-          ifelse(`Listener Group` == "English", "E", "F"),
-          str_pad(
-            Participant,
-            width = 3,
-            side = "left",
-            pad = "0"
-          )
-        ),
-      Phone = sub(":", "ː", Phone),
-      Context = paste0(prev_phone, ":", next_phone),
-      `Phone Language (Long)`=full_phone_languages(`Phone Language (Code)`),
-      `Phone Language (Code)`=fix_phone_language_codes(`Phone Language (Code)`),
-      `Phone (Language)`=paste0(Phone, " (", `Phone Language (Code)`, ")"),
-      Triphone=paste0(prev_phone, Phone, next_phone),
-      `Triphone (Language)` = paste0(Triphone, " (", `Phone Language (Code)`, ")")
-    ) %>%
+    clean_id_items() %>%
+    clean_id_responses() %>%
     select(-code_assim, -language_indiv_code, -language_stimuli_code)
 }
 

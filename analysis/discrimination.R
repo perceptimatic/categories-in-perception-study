@@ -14,51 +14,8 @@ discrimination <- read_csv(
   name_repair = "unique_quiet"
 ) %>%
   select(-`...1`) %>%
-  rename(
-    Participant = individual,
-    `Accuracy and Certainty` =
-      correct_answer,
-    `Accuracy -1/1` =
-      binarized_answer,
-    `Trial Number` = nb_stimuli,
-    `TGT was A (first)` = TGT_first_code,
-    `Listener Group` = language_indiv,
-    `Phone Language (Code)` = language_stimuli
-  ) %>%
-  mutate(
-    `Listener Group` = str_to_title(`Listener Group`),
-    Participant =
-      paste0(
-        "DscPart",
-        ifelse(`Listener Group` == "English", "E", "F"),
-        str_pad(
-          Participant,
-          width = 3,
-          side = "left",
-          pad = "0"
-        )
-      ),
-    `Accuracy`=(`Accuracy -1/1`+1.)/2,
-    TGT = sub(":", "ː", TGT),
-    OTH = sub(":", "ː", OTH),
-    Context = paste0(prev_phone, "–", next_phone),
-    `TGT was A (first)` = 2 * (`TGT was A (first)` - 0.5),
-    `Phone Language (Long)`=full_phone_languages(`Phone Language (Code)`),
-    `Phone Language (Code)`=fix_phone_language_codes(`Phone Language (Code)`),
-    `Phone Contrast Asymmetrical` = contrast_label(TGT, OTH),
-    `Phone Contrast Asymmetrical (Language)` = paste0(
-      `Phone Contrast Asymmetrical`, " (", `Phone Language (Code)`, ")"),
-    `Phone 1` = get_phone1(TGT, OTH),
-    `Phone 2` = get_phone2(TGT, OTH),
-    `Phone Contrast` = contrast_label(`Phone 1`, `Phone 2`),
-    `Phone Contrast (Language)`=paste0(`Phone Contrast`,
-                              " (", `Phone Language (Code)`, ")"),
-    `Triphone Contrast`=paste0(prev_phone, `Phone 1`, next_phone,
-                               "–",
-                               prev_phone, `Phone 2`, next_phone),
-    `Triphone Contrast (Language)` = paste0(`Triphone Contrast`, " (",
-                                         `Phone Language (Code)`, ")")
-  ) %>%
+  clean_discrimination_items() %>%
+  clean_discrimination_responses() %>%
   select(-language_indiv_code,-language_stimuli_code)
 
 discriminability_by_asymm_contrast <- repeated_average(
