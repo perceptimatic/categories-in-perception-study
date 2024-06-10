@@ -14,16 +14,20 @@ import scipy
 import pandas as pd
 from dtw import _dtw
 
-def skld(rep_a, rep_b, eps=0.001):
-    rep_a[rep_a == 0] = eps
-    rep_b[rep_b == 0] = eps
-    kldab = scipy.stats.entropy(rep_a, rep_b, axis=0, keepdims=True)
-    kldba = scipy.stats.entropy(rep_b, rep_b, axis=0, keepdims=True)
-    return 0.5*(kldab + kldba)
+def skld(x, y, eps):
+    x[x == 0] = eps
+    y[y == 0] = eps
+    kldxy = scipy.stats.entropy(x, y)
+    kldyx = scipy.stats.entropy(y, x)
+    return 0.5*(kldyx + kldxy)
+
+def skld_cdist(rep_a, rep_b, eps=0.001):
+    return scipy.spatial.distance.cdist(rep_a, rep_b,
+                                        metric=lambda x, y: skld(x, y, eps))
 
 def cosine_dist(rep_a, rep_b):
     return scipy.spatial.distance.cdist(rep_a, rep_b,
-                                        metric="cosine")
+                                        metric="cosine").astype(np.float32)
 
 def dtw(rep_a, rep_b, distance):
     return _dtw(rep_a.shape[0],
@@ -85,13 +89,12 @@ if __name__ == '__main__':
     parser.add_argument('distance_fn', type=str)
     parser.add_argument('pooling', type=str)
     parser.add_argument('column_prefix', type=str)
-    parser.add_argument('n_threads', type=int)
     args = parser.parse_args()
 
     triplets = pd.read_csv(args.triplet_list_file)
     distances_tgt, distances_oth = get_distances(triplets,
                               args.path_to_data,
-                              {"kl": skld, "cosine": cosine_dist}[args.distance_fn],
+                              {"kl": skld_cdist, "cosine": cosine_dist}[args.distance_fn],
                               {"dtw": dtw, "window-5": lambda x,y,d: window(x,y,d,5),
                                "window-3": lambda x,y,d: window(x,y,d,3)}[args.pooling])
     triplets[args.column_prefix + '_distance_tgt'] = distances_tgt
