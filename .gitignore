@@ -7,3 +7,7 @@
 *LMEDS*
 audio/
 venv
+modelling/dtw.c
+modelling/dtw.*.so
+modelling/build/
+modelling/build/
