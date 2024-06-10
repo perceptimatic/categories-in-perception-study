@@ -278,6 +278,7 @@ mct_plot <- foreach(m_info = list(
       Maximum.Categorization.Threshold = seq(-2, 5, 1),
       Listener.Group = c(-0.5, 0.5),
       Overlap = mean(models$sigmoid_2c_mct_overlap$data$Overlap),
+      Trial.Number = median(models$sigmoid_2c_mct_overlap$Trial.Number),
       Participant = NA,
       filename = NA
     ),
@@ -287,6 +288,7 @@ mct_plot <- foreach(m_info = list(
       Listener.Group = c(-0.5, 0.5),
       Overlap = mean(models$sigmoid_1c_mct_gd_overlap$data$Overlap),
       Goodness.Difference = mean(models$sigmoid_1c_mct_gd_overlap$data$Goodness.Difference),
+      Trial.Number = median(models$sigmoid_1c_mct_gd_overlap$Trial.Number),
       Participant = NA,
       filename = NA
     )
@@ -336,8 +338,8 @@ mct_overlap_gd_plot <- foreach(pred=list(c("Overlap"),
       Listener.Group = c(-0.5, 0.5),
       Overlap = seq(0.75, 1, 0.01),
       Goodness.Difference = mean(
-        models$sigmoid_1c_mct_gd_overlap$data$Goodness.Difference
-      ),
+        models$sigmoid_1c_mct_gd_overlap$data$Goodness.Difference),
+      Trial.Number=median(models$sigmoid_1c_mct_gd_overlap$data$Trial.Number), 
       Participant = NA,
       filename = NA
     ),
@@ -346,6 +348,7 @@ mct_overlap_gd_plot <- foreach(pred=list(c("Overlap"),
       Maximum.Categorization.Threshold = c(-1.5, 0, 1.5, 3),
       Listener.Group = c(-0.5, 0.5),
       Overlap = mean(models$sigmoid_1c_mct_gd_overlap$data$Overlap),
+      Trial.Number=median(models$sigmoid_1c_mct_gd_overlap$data$Trial.Number), 
       Goodness.Difference = seq(-2, 3, 0.1),
       Participant = NA,
       filename = NA

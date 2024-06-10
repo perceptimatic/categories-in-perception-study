@@ -24,6 +24,8 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode, gdmean=0.39, gdsd=0.31
     d[["Haskins"]] <- 2*d$Haskins
   if ("Goodness Difference" %in% names(d))
     d[["Goodness Difference"]] <- (d$`Goodness Difference` - gdmean) 
+  if ("Trial Number" %in% names(d))
+    d[["Trial Number"]] <- d$`Trial Number` - median(d$`Trial Number`)
   if (gpuid != "") {
     m <- brm(
       f,
