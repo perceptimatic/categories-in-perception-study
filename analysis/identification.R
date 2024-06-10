@@ -12,8 +12,7 @@ read_id <- function(id_filename) {
     )
   ) %>%
     clean_id_items() %>%
-    clean_id_responses() %>%
-    select(-code_assim, -language_indiv_code, -language_stimuli_code)
+    clean_id_responses()
 }
 
 get_response_percentages <- function(response_options, responses_given,

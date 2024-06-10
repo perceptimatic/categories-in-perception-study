@@ -15,8 +15,7 @@ discrimination <- read_csv(
 ) %>%
   select(-`...1`) %>%
   clean_discrimination_items() %>%
-  clean_discrimination_responses() %>%
-  select(-language_indiv_code,-language_stimuli_code)
+  clean_discrimination_responses()
 
 discriminability_by_asymm_contrast <- repeated_average(
   discrimination,

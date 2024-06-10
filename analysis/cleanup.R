@@ -68,14 +68,16 @@ clean_discrimination_items <- function(d) {
                              "–",
                              prev_phone, `Phone 2`, next_phone),
       `Triphone Contrast (Language)` = paste0(`Triphone Contrast`, " (",
-                                          `Phone Language (Code)`, ")"))
+                                          `Phone Language (Code)`, ")")) %>%
+    select(-language_stimuli_code)
 }
 
 clean_discrimination_responses <- function(d) {
   clean_responses(d, "DscPart") %>%
   rename(`Accuracy and Certainty` = correct_answer,
          `Accuracy -1/1` = binarized_answer) %>%
-    mutate(`Accuracy`=(`Accuracy -1/1`+1.)/2)
+    mutate(`Accuracy`=(`Accuracy -1/1`+1.)/2) %>%
+    select(-language_indiv_code)
 }
 
 clean_id_items <- function(d) {
@@ -84,11 +86,13 @@ clean_id_items <- function(d) {
     mutate(Phone = sub(":", "ː", Phone),
       `Phone (Language)`=paste0(Phone, " (", `Phone Language (Code)`, ")"),
       Triphone=paste0(prev_phone, Phone, next_phone),
-      `Triphone (Language)` = paste0(Triphone, " (", `Phone Language (Code)`, ")"))
+      `Triphone (Language)` = paste0(Triphone, " (", `Phone Language (Code)`, ")")) %>%
+    select(-language_stimuli_code)
 }
 
 clean_id_responses <- function(d) {
   clean_responses(d, "IDPart") %>%
-  rename(Goodness = grade, Response = assimilation)
+  rename(Goodness = grade, Response = assimilation) %>%
+  select(-code_assim, -language_indiv_code)
 }
 
