@@ -90,7 +90,6 @@ if __name__ == '__main__':
 
     triplets = pd.read_csv(args.triplet_list_file)
     distances_tgt, distances_oth = get_distances(triplets,
-                              args.out_fn,
                               args.path_to_data,
                               {"kl": skld, "cosine": cosine_dist}[args.distance_fn],
                               {"dtw": dtw, "window-5": lambda x,y,d: window(x,y,d,5),
