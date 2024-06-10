@@ -103,7 +103,7 @@ model_specs <- list(
   ordinal_null = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Listener.Group +
+                    Listener.Group*Trial.Number +
                     (1|Participant) + (1 + Listener.Group|filename)"
     ),
     subset = TRUE,
@@ -113,6 +113,7 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Overlap*Listener.Group +
+                    Listener.Group*Trial.Number +
                     (1 + Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     subset = TRUE,
@@ -122,6 +123,7 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Haskins*Listener.Group +
+                    Listener.Group*Trial.Number +
                     (1 + Haskins|Participant) + (1 + Listener.Group|filename)"
     ),
     subset = TRUE,
@@ -131,6 +133,7 @@ model_specs <- list(
     formula = brmsformula(
       "Accuracy.and.Certainty ~
                          Listener.Group +
+                         Listener.Group*Trial.Number +
                          (1|Participant) + (1|filename)"
     ),
     subset = discr_pam_overlap$`Same Top Choice` == "Yes",
@@ -140,6 +143,7 @@ model_specs <- list(
     formula = brmsformula(
       "Accuracy.and.Certainty ~
                          Overlap*Goodness.Difference*Listener.Group +
+                         Listener.Group*Trial.Number +
                          (1|Participant) + (1|filename)"
     ),
     subset = discr_pam_overlap$`Same Top Choice` == "Yes",
@@ -150,6 +154,7 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                          Overlap*Maximum.Categorization.Threshold*Goodness.Difference*Listener.Group -
                          Overlap:Maximum.Categorization.Threshold:Goodness.Difference:Listener.Group +
+                         Listener.Group*Trial.Number +
                          (1|Participant) + (1|filename)"
     ),
     subset = discr_pam_overlap$`Same Top Choice` == "Yes",
@@ -159,6 +164,7 @@ model_specs <- list(
     formula = brmsformula(
       "Accuracy.and.Certainty ~
                          Listener.Group +
+                         Listener.Group*Trial.Number +
                          (1|Participant) + (1|filename)"
     ),
     subset = discr_pam_overlap$`Same Top Choice` == "No",
@@ -168,6 +174,7 @@ model_specs <- list(
     formula = brmsformula(
       "Accuracy.and.Certainty ~
                          Overlap*Maximum.Categorization.Threshold*Listener.Group +
+                         Listener.Group*Trial.Number +
                          (1|Participant) + (1|filename)"
     ),
     subset = discr_pam_overlap$`Same Top Choice` == "No",
@@ -177,6 +184,7 @@ model_specs <- list(
     formula = brmsformula(
       "Accuracy.and.Certainty ~
                          Overlap*Listener.Group +
+                         Listener.Group*Trial.Number +
                          (1|Participant) + (1|filename)"
     ),
     subset = discr_pam_overlap$`Same Top Choice` == "No",
