@@ -7,7 +7,8 @@ makenamesize <- function(d) {
   return(d)
 }
 
-run_brms_model <- function(f, d, filename, gpuid, dvmode, gdmean=0.39, gdsd=0.31) {
+run_brms_model <- function(f, d, filename, gpuid, dvmode,
+                           gdmean=0.39, gdsd=0.31, tnmedian=88, tnmax=179) {
   if (dvmode == "ordered") {
     d <- mutate(d,
                 `Accuracy and Certainty` = factor(`Accuracy and Certainty`, ordered = TRUE))
@@ -23,9 +24,9 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode, gdmean=0.39, gdsd=0.31
   if ("Haskins" %in% names(d))
     d[["Haskins"]] <- 2*d$Haskins
   if ("Goodness Difference" %in% names(d))
-    d[["Goodness Difference"]] <- (d$`Goodness Difference` - gdmean) 
+    d[["Goodness Difference"]] <- (d$`Goodness Difference` - gdmean)/gdsd
   if ("Trial Number" %in% names(d))
-    d[["Trial Number"]] <- d$`Trial Number` - median(d$`Trial Number`)
+    d[["Trial Number"]] <- (d$`Trial Number` - tnmedian)/tnmax
   if (gpuid != "") {
     m <- brm(
       f,
