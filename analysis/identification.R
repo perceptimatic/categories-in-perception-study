@@ -59,9 +59,7 @@ assimilation_vectors <-
                           "Phone Language (Code)", "Response"),
                         c("Proportion of Responses", "Goodness"),
                         na.rm=TRUE)) %>%
-  ungroup() %>%
-  select(-`Phone (Language)`)
-
+  ungroup() 
 
 smooth <- function(x, eps) {
   new_max <- 1 - eps * sum(near(x, 0))

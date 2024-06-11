@@ -7,11 +7,14 @@ PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
 
 Sys.setlocale(locale = "en_US.UTF-8")
+library(conflicted)
 library(tidyverse)
 library(brms)
 library(marginaleffects)
 library(foreach)
 library(patchwork)
+
+conflicts_prefer(dplyr::filter, dplyr::select)
 
 options(mc.cores = CORES)
 
@@ -278,7 +281,7 @@ mct_plot <- foreach(m_info = list(
       Maximum.Categorization.Threshold = seq(-2, 5, 1),
       Listener.Group = c(-0.5, 0.5),
       Overlap = mean(models$sigmoid_2c_mct_overlap$data$Overlap),
-      Trial.Number = median(models$sigmoid_2c_mct_overlap$Trial.Number),
+      Trial.Number = median(models$sigmoid_2c_mct_overlap$data$Trial.Number),
       Participant = NA,
       filename = NA
     ),
@@ -288,7 +291,7 @@ mct_plot <- foreach(m_info = list(
       Listener.Group = c(-0.5, 0.5),
       Overlap = mean(models$sigmoid_1c_mct_gd_overlap$data$Overlap),
       Goodness.Difference = mean(models$sigmoid_1c_mct_gd_overlap$data$Goodness.Difference),
-      Trial.Number = median(models$sigmoid_1c_mct_gd_overlap$Trial.Number),
+      Trial.Number = median(models$sigmoid_1c_mct_gd_overlap$data$Trial.Number),
       Participant = NA,
       filename = NA
     )
