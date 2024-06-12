@@ -198,7 +198,7 @@ model_specs <- list(
     subset = TRUE,
     dvmode = "ordered"
   ),    
-  ordinal_overlap_dfbavg = list(
+  ordinal_doverlap_dfbavg = list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +
