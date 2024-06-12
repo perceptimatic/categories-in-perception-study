@@ -166,7 +166,7 @@ model_specs <- list(
   ordinal_null = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Listener.Group +
+                    Listener.Group*Trial.Number +
                     (1|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -174,7 +174,7 @@ model_specs <- list(
   ordinal_doverlap = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.Overlap*Listener.Group +
+                    Δ.Overlap*Listener.Group + Listener.Group*Trial.Number +
                     (1 + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -182,7 +182,7 @@ model_specs <- list(
   ordinal_dfb = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.DTW.Mel.Filterbank*Listener.Group +
+                    Δ.DTW.Mel.Filterbank*Listener.Group +Listener.Group*Trial.Number +
                     (1 + Δ.DTW.Mel.Filterbank|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -190,7 +190,7 @@ model_specs <- list(
   ordinal_doverlap_dfb = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +
+                    Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +Listener.Group*Trial.Number +
                     (1 + Δ.DTW.Mel.Filterbank + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -198,7 +198,7 @@ model_specs <- list(
   ordinal_dfbavg = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +
+                    Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +Listener.Group*Trial.Number +
                     (1 + Δ.DTW.Mel.Filterbank..Phone.Contrast.|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -206,7 +206,7 @@ model_specs <- list(
   ordinal_doverlap_dfbavg = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +
+                    Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +Listener.Group*Trial.Number +
                     (1 + Δ.DTW.Mel.Filterbank..Phone.Contrast. + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -235,3 +235,4 @@ models <- foreach(
 
 
 print(models)
+print(loo_comparison())
