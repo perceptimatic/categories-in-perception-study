@@ -135,7 +135,7 @@ if (INTERACTIVE) {
     paste0(PLOTS, "/certaccuracy_by_fb_plot_600.png"),
     plot = certaccuracy_by_fb_plot,
     width = 6.52,
-    height = 4.5,
+    height = 3,
     units = "in",
     dpi = 600
   )  
@@ -143,7 +143,7 @@ if (INTERACTIVE) {
     paste0(PLOTS, "/overlap_by_fb_plot_600.png"),
     plot = overlap_by_fb_plot,
     width = 6.52,
-    height = 4.5,
+    height = 3,
     units = "in",
     dpi = 600
   )    

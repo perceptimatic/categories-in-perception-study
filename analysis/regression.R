@@ -23,8 +23,8 @@ run_brms_model <- function(f, d, filename, gpuid, dvmode,
     d[["Maximum Categorization Threshold"]] <- (d$`Maximum Categorization Threshold` - 0.5) / 0.1
   if ("Haskins" %in% names(d))
     d[["Haskins"]] <- 2*d$Haskins
-  if ("Δ.DTW.Mel.Filterbank" %in% names(d))
-    d[["Δ.DTW.Mel.Filterbank"]] <- d[["Δ.DTW.Mel.Filterbank"]]/0.05
+  if ("Δ DTW Mel Filterbank" %in% names(d))
+    d[["Δ DTW Mel Filterbank"]] <- d[["Δ DTW Mel Filterbank"]]/0.05
   if ("Goodness Difference" %in% names(d))
     d[["Goodness Difference"]] <- (d$`Goodness Difference` - gdmean)/gdsd
   if ("Trial Number" %in% names(d))
