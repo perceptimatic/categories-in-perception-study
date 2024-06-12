@@ -1,6 +1,7 @@
 TOP <- Sys.getenv("CPTOP")
 INTERACTIVE <- as.logical(Sys.getenv("CPINT"))
 CORES <- as.numeric(Sys.getenv("CPCORES"))
+GPU <- Sys.getenv("CPGPU")
 SCRIPTS <- paste0(TOP, "/analysis")
 PLOTS <- paste0(TOP, "/analysis")
 MODELS <- paste0(TOP, "/analysis")
@@ -217,6 +218,7 @@ models <- foreach(
   run_brms_model(model_specs[[m]][["formula"]],
                  discr_overlap[model_specs[[m]][["subset"]], ],
                  get_filename(m),
+                 GPU,
                  "ordered")
 }
 
