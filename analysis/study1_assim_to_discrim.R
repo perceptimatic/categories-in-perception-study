@@ -117,7 +117,8 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Overlap*Listener.Group +
                     Listener.Group*Trial.Number +
-                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     subset = TRUE,
     dvmode = "ordered"
@@ -127,7 +128,8 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Haskins*Listener.Group +
                     Listener.Group*Trial.Number +
-                    (1 + Haskins|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Haskins|Participant) + (1 + Listener.Group|filename)"
     ),
     subset = TRUE,
     dvmode = "ordered"

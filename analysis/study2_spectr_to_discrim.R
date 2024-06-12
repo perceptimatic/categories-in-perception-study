@@ -175,7 +175,8 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Listener.Group + Listener.Group*Trial.Number +
-                    (1 + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),
@@ -183,7 +184,8 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.DTW.Mel.Filterbank*Listener.Group +Listener.Group*Trial.Number +
-                    (1 + Δ.DTW.Mel.Filterbank|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Δ.DTW.Mel.Filterbank|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),  
@@ -191,7 +193,10 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +Listener.Group*Trial.Number +
-                    (1 + Δ.DTW.Mel.Filterbank + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Δ.Overlap|Participant) +
+                    (0 + Δ.DTW.Mel.Filterbank|Participant) +
+                    (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),    
@@ -199,7 +204,9 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +Listener.Group*Trial.Number +
-                    (1 + Δ.DTW.Mel.Filterbank..Phone.Contrast.|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Δ.DTW.Mel.Filterbank..Phone.Contrast.|Participant) + 
+                    (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),    
@@ -207,7 +214,10 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +Listener.Group*Trial.Number +
-                    (1 + Δ.DTW.Mel.Filterbank..Phone.Contrast. + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) +
+                    (0 + Δ.DTW.Mel.Filterbank..Phone.Contrast.|Participant) +
+                    (0 + Δ.Overlap|Participant) +
+                    (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   )  
