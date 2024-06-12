@@ -175,7 +175,7 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Listener.Group +
-                    (1 + Overlap|Participant) + (1 + Listener.Group|filename)"
+                    (1 + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),
