@@ -169,7 +169,6 @@ model_specs <- list(
                     Listener.Group +
                     (1|Participant) + (1 + Listener.Group|filename)"
     ),
-    subset = TRUE,
     dvmode = "ordered"
   ),
   ordinal_doverlap = list(
@@ -178,7 +177,6 @@ model_specs <- list(
                     Δ.Overlap*Listener.Group +
                     (1 + Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
-    subset = TRUE,
     dvmode = "ordered"
   ),
   ordinal_dfb = list(
@@ -187,7 +185,6 @@ model_specs <- list(
                     Δ.DTW.Mel.Filterbank*Listener.Group +
                     (1 + Δ.DTW.Mel.Filterbank|Participant) + (1 + Listener.Group|filename)"
     ),
-    subset = TRUE,
     dvmode = "ordered"
   ),  
   ordinal_doverlap_dfb = list(
@@ -196,7 +193,6 @@ model_specs <- list(
                     Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +
                     (1 + Δ.DTW.Mel.Filterbank + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
-    subset = TRUE,
     dvmode = "ordered"
   ),    
   ordinal_doverlap_dfbavg = list(
@@ -205,7 +201,6 @@ model_specs <- list(
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +
                     (1 + Δ.DTW.Mel.Filterbank..Phone.Contrast. + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
     ),
-    subset = TRUE,
     dvmode = "ordered"
   )  
 )
@@ -216,7 +211,7 @@ models <- foreach(
     setNames(x, names(model_specs))
 ) %do% {
   run_brms_model(model_specs[[m]][["formula"]],
-                 discr_overlap[model_specs[[m]][["subset"]], ],
+                 discr_distances,
                  get_filename(m),
                  GPU,
                  "ordered")
