@@ -110,7 +110,6 @@ overlap_by_fb_plot <- ggplot(
   )  +
   coord_cartesian(ylim = c(0, 1))
 
-
 discr_distances <- left_join(
   discrimination,
   distances
@@ -175,8 +174,7 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Listener.Group + Listener.Group*Trial.Number +
-                    (1|Participant) +
-                    (0 + Δ.Overlap|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),
@@ -184,8 +182,7 @@ model_specs <- list(
     formula = formula(
       "Accuracy.and.Certainty ~
                     Δ.DTW.Mel.Filterbank*Listener.Group +Listener.Group*Trial.Number +
-                    (1|Participant) +
-                    (0 + Δ.DTW.Mel.Filterbank|Participant) + (1 + Listener.Group|filename)"
+                    (1|Participant) + (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
   ),  
@@ -194,8 +191,6 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +Listener.Group*Trial.Number +
                     (1|Participant) +
-                    (0 + Δ.Overlap|Participant) +
-                    (0 + Δ.DTW.Mel.Filterbank|Participant) +
                     (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -205,7 +200,6 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +Listener.Group*Trial.Number +
                     (1|Participant) +
-                    (0 + Δ.DTW.Mel.Filterbank..Phone.Contrast.|Participant) + 
                     (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -215,8 +209,6 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group +Listener.Group*Trial.Number +
                     (1|Participant) +
-                    (0 + Δ.DTW.Mel.Filterbank..Phone.Contrast.|Participant) +
-                    (0 + Δ.Overlap|Participant) +
                     (1 + Listener.Group|filename)"
     ),
     dvmode = "ordered"
@@ -246,3 +238,10 @@ models <- foreach(
 
 print(models)
 print(loo_comparison())
+
+dg <- datagrid(model=m,
+               Participant=NA, filename=NA,
+               `Δ.Overlap`=seq(0, 1, 0.5),
+               `Δ.DTW.Mel.Filterbank`=seq(0, 0.06, 0.001),
+               Listener.Group=c(-.5, .5))
+p <- predictions(m, newdata=dg, type="prediction")
