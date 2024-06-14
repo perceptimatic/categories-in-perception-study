@@ -193,6 +193,18 @@ model_specs <- list(
     ),
     dvmode = "ordered"
   ),    
+  ordinal_doverlap_dfb_nodfb = list(
+    formula = formula(
+      "Accuracy.and.Certainty ~
+                    Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +
+                    Listener.Group*Trial.Number -
+                    Δ.DTW.Mel.Filterbank -
+                    Δ.DTW.Mel.Filterbank:Listener.Group +
+                    (1|Participant) +
+                    (1 + Listener.Group|filename)"
+    ),
+    dvmode = "ordered"
+  ),      
   ordinal_dfbavg = list(
     formula = formula(
       "Accuracy.and.Certainty ~
@@ -248,52 +260,21 @@ models <- foreach(
 
 print(models)
 
-dg <- datagrid(model=models$ordinal_doverlap_dfbavg,
+
+dg <- datagrid(model=models$ordinal_doverlap_dfbavg_nodfbavg,
                Participant=NA, filename=NA,
                `Δ.Overlap`=seq(0, 1, 0.5),
                `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(-0.01, 0.06, 0.001)/0.05,
                Listener.Group=c(-.5, .5))
-p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg, dg) %>%
+p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg_nodfbavg, dg) %>%
   (function(x)
     matrix(
       rowSums(
         x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg), 4000)), c(3,2,1)),
         dims=2),
       4000, nrow(dg)))
-dg_small <- datagrid(model=models$ordinal_dfbavg,
-               Participant=NA, filename=NA,
-               `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(-0.01, 0.06, 0.001)/0.05,
-               Listener.Group=c(-.5, .5))
-p_small_matrix <- rstantools::posterior_epred(models$ordinal_dfbavg, dg_small) %>%
-  (function(x)
-    matrix(
-      rowSums(
-        x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg_small), 4000)), c(3,2,1)),
-        dims=2),
-      4000, nrow(dg_small)))
 ggplot() + 
   cp_theme() +
-(mutate(
-  dg_small,
-  `Predicted Accuracy and Certainty` = colMeans(p_small_matrix),
-  conf.low=apply(p_small_matrix, 2, function(x) quantile(x, 0.025)),
-  conf.high=apply(p_small_matrix, 2, function(x) quantile(x, 0.975))
-) %>%
-rename(
-  `Listener Group` = Listener.Group,
-  `Δ DTW Mel Filterbank`=`Δ.DTW.Mel.Filterbank..Phone.Contrast.`,
-) %>%
-  mutate(
-    `Δ DTW Mel Filterbank`=`Δ DTW Mel Filterbank`*0.05,
-    `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
-  ) %>%
-  (function (d) { list(geom_line(data=d,
-                                 aes(x=`Δ DTW Mel Filterbank`,
-                                     y=`Predicted Accuracy and Certainty`),
-                                 lwd=3),
-                       geom_line(data=d, aes(x=`Δ DTW Mel Filterbank`,
-                                             y=`Predicted Accuracy and Certainty`),
-                                 lwd=2.5, colour="red")) } )) +
 (mutate(
   dg,
   `Predicted Accuracy and Certainty` = colMeans(p_matrix),
@@ -307,24 +288,33 @@ rename(
 ) %>%
   mutate(
     `Δ DTW Mel Filterbank`=`Δ DTW Mel Filterbank`*0.05,
-    `Δ Overlap`=factor(`Δ Overlap`),
+    `Δ Overlap`=as.character(`Δ Overlap`),
     `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
   ) %>%
   (function(d) {
-  list(geom_line(data=d, aes(x=`Δ DTW Mel Filterbank`, y=`Predicted Accuracy and Certainty`,
-                linetype=`Δ Overlap`)),
-  geom_ribbon(data=d, aes(x=`Δ DTW Mel Filterbank`, ymin=conf.low, ymax=conf.high,
-                            group=`Δ Overlap`), alpha=0.1),
+  list(
   geom_point(data=discr_by_contrast_distances,
              aes(x=`Δ DTW Mel Filterbank`, y=`Accuracy and Certainty`,
-                 fill=`Δ Overlap`), pch=21),
+                 alpha=`Δ Overlap`), pch=20),
+    geom_line(data=d, aes(x=`Δ DTW Mel Filterbank`, y=`Predicted Accuracy and Certainty`,
+                linetype=`Δ Overlap`), linewidth=0.6),
+  geom_ribbon(data=d, aes(x=`Δ DTW Mel Filterbank`, ymin=conf.low, ymax=conf.high,
+                            group=`Δ Overlap`), alpha=0.1),
   facet_wrap(~ `Listener Group`),
-  scale_fill_distiller(palette="BuGn", limits=c(0,1))) }))  
+  scale_alpha_continuous(limits=c(0,1), range=c(0.1,1), label = as.character,
+                         n.breaks=3),
+  scale_linetype_manual(values = c(
+        `0` = 5,
+        `0.5` = 4,
+        `1` = 1)),
+  guides(alpha=guide_legend(order=1))
+  )
+    }))  
 
 dg <- datagrid(model=models$ordinal_doverlap_dfbavg,
                Participant=NA, filename=NA,
                `Δ.Overlap`=seq(0, 1, 0.01),
-               `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(0, 0.06, 0.03)/0.05,
+               `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(0, 0.05, 0.025)/0.05,
                Listener.Group=c(-.5, .5))
 p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg, dg) %>%
   (function(x)
@@ -333,56 +323,39 @@ p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg, dg) %>%
         x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg), 4000)), c(3,2,1)),
         dims=2),
       4000, nrow(dg)))
-dg_small <- datagrid(model=models$ordinal_doverlap,
-               Participant=NA, filename=NA,
-               `Δ.Overlap`=seq(0, 1, 0.01),
-               Listener.Group=c(-.5, .5))
-p_small_matrix <- rstantools::posterior_epred(models$ordinal_doverlap, dg_small) %>%
-  (function(x)
-    matrix(
-      rowSums(
-        x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg_small), 4000)), c(3,2,1)),
-        dims=2),
-      4000, nrow(dg_small)))
-mutate(
-  dg,
-  `Predicted Accuracy and Certainty` = colMeans(p_matrix),
-  conf.low=apply(p_matrix, 2, function(x) quantile(x, 0.025)),
-  conf.high=apply(p_matrix, 2, function(x) quantile(x, 0.975))
-) %>%
-rename(
-  `Listener Group` = Listener.Group,
-  `Δ DTW Mel Filterbank`=`Δ.DTW.Mel.Filterbank..Phone.Contrast.`,
-  `Δ Overlap`=`Δ.Overlap`
-) %>%
-  mutate(
-    `Δ DTW Mel Filterbank`=factor(`Δ DTW Mel Filterbank`*0.05),
-    `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
-  ) %>%
 ggplot() + 
-  geom_line(aes(linetype=`Δ DTW Mel Filterbank`, y=`Predicted Accuracy and Certainty`,
-                x=`Δ Overlap`)) +
-  geom_ribbon(aes(group=`Δ DTW Mel Filterbank`, ymin=conf.low, ymax=conf.high,
-                            x=`Δ Overlap`), alpha=0.1) +
-  geom_point(data=discr_by_contrast_distances,
-             aes(x=`Δ Overlap`, y=`Accuracy and Certainty`,
-                 fill=`Δ DTW Mel Filterbank`), pch=21) +
-  facet_wrap(~ `Listener Group`)+
-  scale_fill_distiller(palette="BuGn", limits=c(-0.01,0.06)) +
   cp_theme() +
-mutate(
-  dg_small,
-  `Predicted Accuracy and Certainty` = colMeans(p_small_matrix),
-  conf.low=apply(p_small_matrix, 2, function(x) quantile(x, 0.025)),
-  conf.high=apply(p_small_matrix, 2, function(x) quantile(x, 0.975))
-) %>%
-rename(
-  `Listener Group` = Listener.Group,
-  `Δ Overlap`=`Δ.Overlap`
-) %>%
-  mutate(
-    `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
+  (mutate(
+    dg,
+    `Predicted Accuracy and Certainty` = colMeans(p_matrix),
+    conf.low=apply(p_matrix, 2, function(x) quantile(x, 0.025)),
+    conf.high=apply(p_matrix, 2, function(x) quantile(x, 0.975))
   ) %>%
-geom_line(data=.,
-          aes(x=`Δ Overlap`, y=`Predicted Accuracy and Certainty`),
-          colour="red") 
+    rename(
+      `Listener Group` = Listener.Group,
+      `Δ DTW Mel Filterbank`=`Δ.DTW.Mel.Filterbank..Phone.Contrast.`,
+      `Δ Overlap`=`Δ.Overlap`
+    ) %>%
+    mutate(
+      `Δ DTW Mel Filterbank`=as.character(`Δ DTW Mel Filterbank`*0.05),
+      `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
+    ) %>%
+    (function(d) {
+      list(
+        geom_point(data=discr_by_contrast_distances,
+                   aes(alpha=`Δ DTW Mel Filterbank`, y=`Accuracy and Certainty`,
+                       x=`Δ Overlap`), pch=20),
+        geom_line(data=d, aes(linetype=`Δ DTW Mel Filterbank`, y=`Predicted Accuracy and Certainty`,
+                              x=`Δ Overlap`), linewidth=0.6),
+        geom_ribbon(data=d, aes(group=`Δ DTW Mel Filterbank`, ymin=conf.low, ymax=conf.high,
+                                x=`Δ Overlap`), alpha=0.1),
+        facet_wrap(~ `Listener Group`),
+        scale_alpha_continuous(limits=c(0,0.05), range=c(0.1,1), label = as.character,
+                               oob=scales::squish, n.breaks=3),
+        scale_linetype_manual(values = c(
+          `0` = 5,
+          `0.025` = 4,
+          `0.05` = 1)),
+        guides(alpha=guide_legend(order=1))
+        )
+    }))  
