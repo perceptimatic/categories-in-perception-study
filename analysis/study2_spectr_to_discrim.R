@@ -196,12 +196,11 @@ model_specs <- list(
   ordinal_doverlap_dfb_nodfb = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +
-                    Listener.Group*Trial.Number -
-                    Δ.DTW.Mel.Filterbank -
-                    Δ.DTW.Mel.Filterbank:Listener.Group -
-                    Δ.Overlap:Δ.DTW.Mel.Filterbank +
+                    Δ.Overlap +
+                    Listener.Group*Trial.Number +
+                    Δ.Overlap:Listener.Group +
                     Overlap:Δ.DTW.Mel.Filterbank +
+                    Overlap:Δ.DTW.Mel.Filterbank:Listener.Group +      
                     (1|Participant) +
                     (1 + Listener.Group|filename)"
     ),
@@ -228,12 +227,11 @@ model_specs <- list(
   ordinal_doverlap_dfbavg_nodfbavg = list(
     formula = formula(
       "Accuracy.and.Certainty ~
-                    Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group - 
-                    Δ.DTW.Mel.Filterbank..Phone.Contrast. -
-                    Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group -
-                    Δ.Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
-                    Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
+                    Δ.Overlap +
                     Listener.Group*Trial.Number +
+                    Δ.Overlap:Listener.Group +
+                    Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
+                    Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group +
                     (1|Participant) +
                     (1 + Listener.Group|filename)"
     ),
