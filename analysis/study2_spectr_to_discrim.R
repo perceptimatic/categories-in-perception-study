@@ -261,101 +261,110 @@ models <- foreach(
 print(models)
 
 
-dg <- datagrid(model=models$ordinal_doverlap_dfbavg_nodfbavg,
-               Participant=NA, filename=NA,
-               `Δ.Overlap`=seq(0, 1, 0.5),
-               `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(-0.01, 0.06, 0.001)/0.05,
-               Listener.Group=c(-.5, .5))
-p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg_nodfbavg, dg) %>%
-  (function(x)
-    matrix(
-      rowSums(
-        x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg), 4000)), c(3,2,1)),
-        dims=2),
-      4000, nrow(dg)))
-ggplot() + 
-  cp_theme() +
-(mutate(
-  dg,
-  `Predicted Accuracy and Certainty` = colMeans(p_matrix),
-  conf.low=apply(p_matrix, 2, function(x) quantile(x, 0.025)),
-  conf.high=apply(p_matrix, 2, function(x) quantile(x, 0.975))
-) %>%
-rename(
-  `Listener Group` = Listener.Group,
-  `Δ DTW Mel Filterbank`=`Δ.DTW.Mel.Filterbank..Phone.Contrast.`,
-  `Δ Overlap`=`Δ.Overlap`
-) %>%
-  mutate(
-    `Δ DTW Mel Filterbank`=`Δ DTW Mel Filterbank`*0.05,
-    `Δ Overlap`=as.character(`Δ Overlap`),
-    `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
-  ) %>%
-  (function(d) {
-  list(
-  geom_point(data=discr_by_contrast_distances,
-             aes(x=`Δ DTW Mel Filterbank`, y=`Accuracy and Certainty`,
-                 alpha=`Δ Overlap`), pch=20),
-    geom_line(data=d, aes(x=`Δ DTW Mel Filterbank`, y=`Predicted Accuracy and Certainty`,
-                linetype=`Δ Overlap`), linewidth=0.6),
-  geom_ribbon(data=d, aes(x=`Δ DTW Mel Filterbank`, ymin=conf.low, ymax=conf.high,
-                            group=`Δ Overlap`), alpha=0.1),
-  facet_wrap(~ `Listener Group`),
-  scale_alpha_continuous(limits=c(0,1), range=c(0.1,1), label = as.character,
-                         n.breaks=3),
-  scale_linetype_manual(values = c(
-        `0` = 5,
-        `0.5` = 4,
-        `1` = 1)),
-  guides(alpha=guide_legend(order=1))
-  )
-    }))  
+doverlap_dfb_plot <- foreach(pred=list("Δ Overlap", 
+                                         "Δ DTW Mel Filterbank")) %do% {
+  dg <- list(
+    `Δ Overlap` = datagrid(
+      model=models$ordinal_doverlap_dfbavg,
+      Participant=NA, filename=NA,
+      `Δ.Overlap`=seq(0, 1, 0.01),
+      `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(0, 0.05, 0.025)/0.05,
+      Listener.Group=c(-.5, .5)),
+    `Δ DTW Mel Filterbank` = datagrid(
+      model=models$ordinal_doverlap_dfbavg,
+      Participant=NA, filename=NA,
+      `Δ.Overlap`=seq(0, 1, 0.5),
+      `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(-0.01, 0.06, 0.001)/0.05,
+      Listener.Group=c(-.5, .5))
+  )[[pred]]  
+  p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg, dg) %>%
+    (function(x)
+      matrix(
+        rowSums(
+          x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg), 4000)), c(3,2,1)),
+          dims=2),
+        4000, nrow(dg)))
+  ggplot() + cp_theme() +
+    (mutate(
+      dg,
+      `Predicted Accuracy and Certainty` = colMeans(p_matrix),
+      conf.low=apply(p_matrix, 2, function(x) quantile(x, 0.025)),
+      conf.high=apply(p_matrix, 2, function(x) quantile(x, 0.975))
+     ) %>%
+     rename(
+       `Listener Group` = Listener.Group,
+       `Δ DTW Mel Filterbank`=`Δ.DTW.Mel.Filterbank..Phone.Contrast.`,
+       `Δ Overlap`=`Δ.Overlap`
+     ) %>%
+     mutate(
+       `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French"),
+       `Δ DTW Mel Filterbank`=`Δ DTW Mel Filterbank`*0.05
+     ) %>% (
+       list(
+         `Δ DTW Mel Filterbank`=
+           function(d) mutate(d, `Δ Overlap`=as.character(`Δ Overlap`)),
+         `Δ Overlap`=
+           function(d) mutate(d, `Δ DTW Mel Filterbank`=as.character(`Δ DTW Mel Filterbank`))
+       )[[pred]]
+     ) %>% (
+       function(d) {
+        list(
+           geom_point(data=discr_by_contrast_distances,
+             aes(x=.data[[pred]],
+                 y=`Accuracy and Certainty`,
+                 alpha=.data[[c(
+                   `Δ DTW Mel Filterbank`="Δ Overlap",
+                   `Δ Overlap`="Δ DTW Mel Filterbank"
+                 )[pred]]]), pch=20),
+           geom_line(data=d, aes(x=.data[[pred]],
+                                 y=`Predicted Accuracy and Certainty`,
+                                 linetype=.data[[c(
+                                   `Δ DTW Mel Filterbank`="Δ Overlap",
+                                   `Δ Overlap`="Δ DTW Mel Filterbank"
+                                   )[pred]]]),
+                     linewidth=0.6),          
+           geom_ribbon(data=d, aes(x=.data[[pred]],
+                                   ymin=conf.low, ymax=conf.high,
+                                   group=.data[[c(
+                                     `Δ DTW Mel Filterbank`="Δ Overlap",
+                                     `Δ Overlap`="Δ DTW Mel Filterbank"
+                                   )[pred]]]), alpha=0.1),           
+           scale_alpha_continuous(limits=list(
+             `Δ DTW Mel Filterbank`=c(0,1),
+             `Δ Overlap`=c(0,0.05)
+             )[[pred]],
+                                  range=c(0.1,1),
+                                  label = as.character,
+                                  oob=scales::squish,
+                                  n.breaks=3),
+           scale_linetype_manual(values =
+            list(`Δ Overlap`=c(
+                 `0` = 5,
+                 `0.025` = 4,
+                 `0.05` = 1),
+                 `Δ DTW Mel Filterbank`=c(
+                   `0` = 5,
+                   `0.5` = 4,
+                   `1` = 1))[[pred]], 
+            labels=c("", "", "")
+            ),
+             facet_grid(`Listener Group` ~ .),
+             guides(alpha=guide_legend(order=1,nrow=3),
+                    linetype=guide_legend(nrow=3, title=NULL)),
+             theme(legend.key.width=unit(1, "cm"),
+                   legend.text.position = "left",
+                   legend.spacing = unit(0, "cm"))) }
+           ) 
+         )
+} %>% wrap_plots(nrow = 1)
+print(doverlap_dfb_plot)
 
-dg <- datagrid(model=models$ordinal_doverlap_dfbavg,
-               Participant=NA, filename=NA,
-               `Δ.Overlap`=seq(0, 1, 0.01),
-               `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(0, 0.05, 0.025)/0.05,
-               Listener.Group=c(-.5, .5))
-p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg, dg) %>%
-  (function(x)
-    matrix(
-      rowSums(
-        x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg), 4000)), c(3,2,1)),
-        dims=2),
-      4000, nrow(dg)))
-ggplot() + 
-  cp_theme() +
-  (mutate(
-    dg,
-    `Predicted Accuracy and Certainty` = colMeans(p_matrix),
-    conf.low=apply(p_matrix, 2, function(x) quantile(x, 0.025)),
-    conf.high=apply(p_matrix, 2, function(x) quantile(x, 0.975))
-  ) %>%
-    rename(
-      `Listener Group` = Listener.Group,
-      `Δ DTW Mel Filterbank`=`Δ.DTW.Mel.Filterbank..Phone.Contrast.`,
-      `Δ Overlap`=`Δ.Overlap`
-    ) %>%
-    mutate(
-      `Δ DTW Mel Filterbank`=as.character(`Δ DTW Mel Filterbank`*0.05),
-      `Listener Group` = ifelse(`Listener Group` == -0.5, "English", "French")
-    ) %>%
-    (function(d) {
-      list(
-        geom_point(data=discr_by_contrast_distances,
-                   aes(alpha=`Δ DTW Mel Filterbank`, y=`Accuracy and Certainty`,
-                       x=`Δ Overlap`), pch=20),
-        geom_line(data=d, aes(linetype=`Δ DTW Mel Filterbank`, y=`Predicted Accuracy and Certainty`,
-                              x=`Δ Overlap`), linewidth=0.6),
-        geom_ribbon(data=d, aes(group=`Δ DTW Mel Filterbank`, ymin=conf.low, ymax=conf.high,
-                                x=`Δ Overlap`), alpha=0.1),
-        facet_wrap(~ `Listener Group`),
-        scale_alpha_continuous(limits=c(0,0.05), range=c(0.1,1), label = as.character,
-                               oob=scales::squish, n.breaks=3),
-        scale_linetype_manual(values = c(
-          `0` = 5,
-          `0.025` = 4,
-          `0.05` = 1)),
-        guides(alpha=guide_legend(order=1))
-        )
-    }))  
+ggsave(
+  paste0(PLOTS, "/doverlap_dfb_plot.png"),
+  plot = doverlap_dfb_plot,
+  width = 6.52,
+  height = 4.5,
+  units = "in",
+  dpi = 600
+)
+
