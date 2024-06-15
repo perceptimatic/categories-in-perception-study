@@ -202,7 +202,6 @@ model_specs <- list(
                     Δ.DTW.Mel.Filterbank:Listener.Group -
                     Δ.Overlap:Δ.DTW.Mel.Filterbank +
                     Overlap:Δ.DTW.Mel.Filterbank +
-                    Δ.DTW.Mel.Filterbank:Listener.Group +
                     (1|Participant) +
                     (1 + Listener.Group|filename)"
     ),
@@ -234,7 +233,6 @@ model_specs <- list(
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group -
                     Δ.Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
                     Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
-                    Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group  +
                     Listener.Group*Trial.Number +
                     (1|Participant) +
                     (1 + Listener.Group|filename)"
