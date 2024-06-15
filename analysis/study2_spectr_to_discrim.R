@@ -116,7 +116,7 @@ discr_distances <- left_join(
 ) %>% left_join(
   rename(discr_by_contrast_distances,
          `Δ DTW Mel Filterbank (Phone Contrast)`=`Δ DTW Mel Filterbank`) %>%
-    select(`Δ DTW Mel Filterbank (Phone Contrast)`, `Δ Overlap`,
+    select(`Δ DTW Mel Filterbank (Phone Contrast)`, `Δ Overlap`, Overlap,
            `Phone Language (Long)`, `Phone Language (Code)`,
            `Phone Contrast (Language)`, `Listener Group`),
   by = c(
@@ -199,6 +199,8 @@ model_specs <- list(
                     Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +
                     Listener.Group*Trial.Number -
                     Δ.DTW.Mel.Filterbank -
+                    Δ.Overlap:Δ.DTW.Mel.Filterbank +
+                    Overlap:Δ.DTW.Mel.Filterbank +
                     Δ.DTW.Mel.Filterbank:Listener.Group +
                     (1|Participant) +
                     (1 + Listener.Group|filename)"
@@ -228,6 +230,8 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group - 
                     Δ.DTW.Mel.Filterbank..Phone.Contrast. -
+                    Δ.Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
+                    Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group  +
                     Listener.Group*Trial.Number +
                     (1|Participant) +
@@ -368,3 +372,6 @@ ggsave(
   dpi = 600
 )
 
+loo_compare(models$ordinal_doverlap_dfb, models$ordinal_doverlap)
+loo_compare(models$ordinal_doverlap_dfbavg, models$ordinal_doverlap)
+loo_compare(models$ordinal_doverlap_dfbavg, models$ordinal_doverlap_dfb)
