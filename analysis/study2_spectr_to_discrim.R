@@ -199,6 +199,7 @@ model_specs <- list(
                     Δ.Overlap*Δ.DTW.Mel.Filterbank*Listener.Group +
                     Listener.Group*Trial.Number -
                     Δ.DTW.Mel.Filterbank -
+                    Δ.DTW.Mel.Filterbank:Listener.Group -
                     Δ.Overlap:Δ.DTW.Mel.Filterbank +
                     Overlap:Δ.DTW.Mel.Filterbank +
                     Δ.DTW.Mel.Filterbank:Listener.Group +
@@ -230,6 +231,7 @@ model_specs <- list(
       "Accuracy.and.Certainty ~
                     Δ.Overlap*Δ.DTW.Mel.Filterbank..Phone.Contrast.*Listener.Group - 
                     Δ.DTW.Mel.Filterbank..Phone.Contrast. -
+                    Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group -
                     Δ.Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
                     Overlap:Δ.DTW.Mel.Filterbank..Phone.Contrast. +
                     Δ.DTW.Mel.Filterbank..Phone.Contrast.:Listener.Group  +
@@ -265,29 +267,33 @@ models <- foreach(
 print(models)
 
 
+ndraws <- 4000
 doverlap_dfb_plot <- foreach(pred=list("Δ Overlap", 
-                                         "Δ DTW Mel Filterbank")) %do% {
+                                        "Δ DTW Mel Filterbank")) %do% {
   dg <- list(
     `Δ Overlap` = datagrid(
-      model=models$ordinal_doverlap_dfbavg,
+      model=models$ordinal_doverlap_dfbavg_nodfbavg,
       Participant=NA, filename=NA,
       `Δ.Overlap`=seq(0, 1, 0.01),
       `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(0, 0.05, 0.025)/0.05,
       Listener.Group=c(-.5, .5)),
     `Δ DTW Mel Filterbank` = datagrid(
-      model=models$ordinal_doverlap_dfbavg,
+      model=models$ordinal_doverlap_dfbavg_nodfbavg,
       Participant=NA, filename=NA,
       `Δ.Overlap`=seq(0, 1, 0.5),
       `Δ.DTW.Mel.Filterbank..Phone.Contrast.`=seq(-0.01, 0.06, 0.001)/0.05,
       Listener.Group=c(-.5, .5))
-  )[[pred]]  
-  p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg, dg) %>%
+  )[[pred]]  %>%
+    mutate(Overlap=1-`Δ.Overlap`)
+  p_matrix <- rstantools::posterior_epred(models$ordinal_doverlap_dfbavg_nodfbavg, dg) %>%
     (function(x)
       matrix(
         rowSums(
-          x*aperm(array(c(-3, -2, -1, 1, 2, 3), dim=c(6, nrow(dg), 4000)), c(3,2,1)),
+          x*aperm(array(c(-3, -2, -1, 1, 2, 3),
+                        dim=c(6, nrow(dg), ndraws)),
+                  c(3,2,1)),
           dims=2),
-        4000, nrow(dg)))
+        ndraws, nrow(dg)))
   ggplot() + cp_theme() +
     (mutate(
       dg,
