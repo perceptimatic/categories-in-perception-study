@@ -5,9 +5,8 @@ source("analysis/pathnames.R")
 source("analysis/aggregation.R")
 source("analysis/cleanup.R")
 
-MFCC_DATA <- ("mfccclass_vecs_avgs.csv")
+MFCC_DATA <- ("mfcc_class_vecs_avgs.csv")
 W2V_DATA <- ("wav2vec_class_vecs_avgs.csv")
-DS_DATA <- ("analysis/wv_deepspeech_class_vectors.csv")
 MFCC_DELTAS <- read_csv("mfcc_deltas.csv")
 W2V_DELTAS <- read_csv("wav2vec_deltas.csv")
 
