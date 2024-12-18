@@ -1,0 +1,8 @@
+using the french training data used for humans, using the wavs, both words and
+noncewords. "faitewav"="faite"
+
+manually found the vowel interval for ~66 words (speaker 9, 8, and a bit of 7)
+
+making script to predict the vowel for other participants
+
+then will check if thats roughly right
