@@ -4,20 +4,8 @@ import pandas as pd
 import csv
 import math
 import os
-from scipy.spatial.distance import cdist
-from subprocess import call
-
-import matplotlib.pyplot as plt
 from pathlib import Path
-import plotly.express as px
-import plotly.graph_objects as go
 
-import sklearn.datasets as datasets
-from sklearn.datasets import make_blobs
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-
-k = 100
 
 WORD_MAPPING = {
     'cake': 'eɪ', #dipthong
@@ -197,68 +185,16 @@ def average_probability(test_labels, compiled_probabilities):
             average_probabilities[vowel][key] /= count[vowel]
     return average_probabilities
 
-def heatmap(train_labels, test_labels, average_probabilities, image_name):
-    print('creating heatmap...')
-    
-    # train_labels_sorted = sorted(set(train_labels))
-    # test_labels_sorted = sorted(set(test_labels))
-    
-    train_labels_sorted = ['æ', 'ɑ', 'eɪ', 'ɛ', 'i', 'ɪ', 'oʊ', 'u', 'ʊ', 'ʌ']
-    test_labels_sorted = ['a (de)', 'a (fr)', 'a (pt-br)', 'aː (de-mun)', 'aː (de)', 
-    'aː (et)', 'æ (en-us)', 'æː (et)', 'ɐ̃ (pt-br)', 'ɑ (en-us)', 'ɑ̃ (fr)', 'e (de)', 
-    'e (fr)', 'e (pt-br)', 'ẽ (pt-br)', 'eɪ (en-us)', 'ɛ (de)', 'ɛ (en-us)', 'ɛ (fr)', 
-    'ɛ̃ (fr)', 'ɛ (pt-br)', 'ɤː (et)', 'i (de)', 'i (en-us)', 'i (fr)', 'i (pt-br)', 
-    'ĩ (pt-br)', 'i (tr)', 'iː (de-mun)', 'iː (et)', 'ɪ (de-mun)', 'ɪ (en-us)', 
-    'o (de)', 'o (fr)', 'ø (fr)', 'o (pt-br)', 'õ (pt-br)', 'øː (de-mun)', 'øː (et)', 
-    'œ (fr)', 'œ (tr)', 'oʊ (en-us)', 'ɔ (de)', 'ɔ (fr)', 'ɔ̃ (fr)', 'ɔ (pt-br)', 
-    'u (en-us)', 'u (fr)', 'u (pt-br)', 'ũ (pt-br)', 'u (tr)', 'uː (de-mun)', 'ɯ (tr)', 
-    'ʊ (de-mun)', 'ʊ (en-us)', 'ʌ (en-us)', 'y (fr)', 'y (tr)', 'yː (de-mun)', 'yː (et)', 
-    'ʏ (de-mun)']
 
-    #getting data in the right order
-    data = []
-    for label in test_labels_sorted:
-        entry = []
-        for train_vowel in train_labels_sorted:
-            entry.append(average_probabilities[label][train_vowel])
-        data.append(entry)
-
-    fig = px.imshow(data,
-                    labels=dict(x="Response", y="Phone (language)", color="Proportion of Responses"),
-                    x=train_labels_sorted,
-                    y=test_labels_sorted
-                )
-    fig.update_xaxes(side="bottom")
-
-    fig.layout.height = 1500
-    fig.layout.width = 1500  
-
-    fig.update_layout(
-        font=dict(
-            family="Times New Roman",
-            size=12,  # Set the font size here
-            color="RebeccaPurple"
-        )
-    )
-
-    fig.write_image(image_name+'.png')
-    
-    print('done heatmap!')
-
-def load_training_data(train_dir, language):
+def load_training_data(train_dir, language, stimuli_csv):
     print('loading data for training set')
     # DATA LOADING
     vowels_data = []
     # load the data from the vowels from words (strut, cake, etc .)
     for filename in (train_dir.glob("**/*.npy")): 
         array = np.load(filename)
-        #flattened = array.flatten()
-        #vowels_data.append(flattened)
-        sum_array = [0]*array.shape[1] #[0]*x.shape[1]
-        for frame in range(array.shape[0]): # fix to x.shape[0]
-            for spot in range(array.shape[1]): #fix this to x.shape[1]
-                sum_array[spot] += array[frame][spot]
-        average_array = [x/array.shape[0] for x in sum_array]
+        # Compute the average of each column across all frames
+        average_array = np.mean(array, axis=0)
         vowels_data.append(np.array(average_array))
 
     # LABEL LOADING
@@ -271,7 +207,7 @@ def load_training_data(train_dir, language):
             file_no_path = Path(filename).name
             vowels_labels.append(WORD_MAPPING[file_no_path[file_no_path.find('_')+1:file_no_path.find('.')]]) 
             count += 1
-            if (count % 100 == 0):
+            if (count % 500 == 0):
                 print(count)
 
         # add the labels of the vowels from the ai corpus
@@ -282,15 +218,16 @@ def load_training_data(train_dir, language):
 
             vowels_labels.append(label_just_vowel(just_sound_name))
             count += 1
-            if (count % 100 == 0):
+            if (count % 500 == 0):
                 print(count)
 
         wanted_vowels = WANTED_VOWELS
     
     if language == 'fre':
+        csvfile = pd.read_csv(stimuli_csv, index_col = "unique_filename")
         for filename in train_dir.glob("**/*.npy"):
-            file_no_path = Path(filename).name
-            vowels_labels.append(file_no_path.split('_')[3])
+            file_no_path = Path(filename).name.removesuffix('.npy')
+            vowels_labels.append(csvfile.loc[file_no_path, "vowel"])
             count += 1
             if (count % 500 == 0):
                 print(count)
@@ -309,7 +246,7 @@ def load_training_data(train_dir, language):
     distribution = {}
     for vowel in wanted_vowels:
         distribution[vowel] = filtered_vowels_labels.count(vowel)
-    print(distribution)
+    print("vowel distribution:", distribution)
 
     # create dataset
     X, y = filtered_vowels_data, filtered_vowels_labels
@@ -317,11 +254,6 @@ def load_training_data(train_dir, language):
     return X, y # these will be X_train, y_train for the rest of the study
 
 def kNN_regression(X_train, X_test, y_train, y_test, k, image_name, stimulus_ABX_code_test, class_vec_wv_dir):
-    # Splitting Data into Training and Testing Datasets
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 0)
-
-    print('starting kNN regression')
-
     train_labels = set(y_train)
     test_labels = set(y_test)
     compiled_probabilities = []
@@ -360,8 +292,6 @@ def kNN_regression(X_train, X_test, y_train, y_test, k, image_name, stimulus_ABX
         if y_test[test_index] == max(klabels, key=klabels.get):
             count += 1
 
-    print('finished kNN regression')
-
     average_probabilities = average_probability(test_labels, compiled_probabilities)
     # some_file = heatmap(train_labels, test_labels, average_probabilities, image_name)
     print('finished kNN regression')
@@ -371,9 +301,17 @@ def kNN_regression(X_train, X_test, y_train, y_test, k, image_name, stimulus_ABX
     for vector_i, vector in enumerate(compiled_probabilities):
         vector_as_array = []
         for label in train_labels:
-                vector_as_array.append(vector[1][label])
-        np.save(str(class_vec_wv_dir) + ( stimulus_ABX_code_test[vector_i].removesuffix('.wav') ) + '.npy', [vector_as_array])
-
+            vector_as_array.append(vector[1].get(label, 0))  # Safely get value for label
+        
+        # Build the output file path safely
+        output_file = os.path.join(
+            class_vec_wv_dir,
+            stimulus_ABX_code_test[vector_i].removesuffix('.wav') + '.npy'
+        )
+        
+        # Save the vector array
+        np.save(output_file, vector_as_array)
+    
     return average_probabilities, compiled_probabilities
 
 
@@ -387,15 +325,15 @@ def load_testing_data(cut_wv_model_dir, stimuli_csv):
     count = 0
 
     csvfile = pd.read_csv(stimuli_csv, index_col='index')    
-    for filename in cut_wv_model_dir.glob("**/*.npy"): 
-        stimulus_code = Path(filename).name.removesuffix('.npy').removeprefix('vowel_only_')
+    for filename in cut_wv_model_dir.glob("**/*.npy"):
+        basename = Path(filename).name.removesuffix('.npy')
+        if len(basename.split('_')) == 3:
+            stimulus_code = basename.split('_')[0] + '_' + basename.split('_')[1]
+        else:
+            stimulus_code = basename.split('_')[0]
         array = np.load(filename)
-        sum_array = [0]*array.shape[1]
-        for frame in range(array.shape[0]):
-            for spot in range(array.shape[1]):
-                sum_array[spot] += array[frame][spot]
-        average_array = [x/array.shape[0] for x in sum_array]
-        
+        # Compute the average of each column across all frames
+        average_array = np.mean(array, axis=0)   
         phone = WV_MAPPING[csvfile.loc[stimulus_code, '#phone']]
         lang = LANG_CODES[csvfile.loc[stimulus_code, 'language']]
         
@@ -403,7 +341,7 @@ def load_testing_data(cut_wv_model_dir, stimuli_csv):
         if phone in WANTED_VOWELS_TEST:
             X_test.append(average_array)
             y_test.append(phone + ' ' + lang) #label loading
-            stimulus_ABX_code_test.append(csvfile.loc[stimulus_code, '#file_extract'])
+            stimulus_ABX_code_test.append(csvfile.loc[stimulus_code, '#file_extract'].removesuffix('.wav'))
         
         count += 1
         if count % 500 == 0:
@@ -414,7 +352,7 @@ def load_testing_data(cut_wv_model_dir, stimuli_csv):
 
 
 def row_distance(row, cache, train_labels, class_vec_or_X_test_model, stimulus_ABX_code_test):
-    TGT_filename = stimulus_ABX_code_test.index(row['TGT_item'])# fix this area
+    TGT_filename = stimulus_ABX_code_test.index(row['TGT_item'])
     OTH_filename = stimulus_ABX_code_test.index(row['OTH_item'])
     X_filename = stimulus_ABX_code_test.index(row['X_item'])
     
@@ -466,7 +404,6 @@ def distance(AB_item, X_item):
         
 
 def ABX_task(train_labels, class_vec_or_X_test_model, stimulus_ABX_code_test, model, infile, outfile):
-    print('starting ABX task')
     exp_csvfile = pd.read_csv(infile)
     
     cache = {}
@@ -474,13 +411,8 @@ def ABX_task(train_labels, class_vec_or_X_test_model, stimulus_ABX_code_test, mo
         
     exp_csvfile.to_csv(outfile)
 
-    print('finished ABX task')
-
-# X2_train, X2_test, y2_train, y2_test = vowels_data, task2_vowels_data, vowels_labels, task2_vowels_labels
-
 
 def export_identification_data(average_classification_vectors, train_labels, test_labels, doc_directory, model):
-    print("exporting averaged classification vectors...")
     with open(doc_directory + model + "class_vecs_avgs.csv", mode='w', newline='') as file:
         writer = csv.writer(file)
     
@@ -492,19 +424,28 @@ def export_identification_data(average_classification_vectors, train_labels, tes
             for train_label in FRENCH_WANTED_VOWELS:
                 value = average_classification_vectors[test_label][train_label]
                 writer.writerow([test_label, train_label, value])       
-    print("finished exporting averaged classification vectors...")
+
+
+def load_classification_vectors(classification_vector_dir):
+    classification_vectors = {}
+    for filename in (classification_vector_dir.glob("**/*.npy")):
+        array = np.load(filename)
+        stimuli_code = filename.name.removesuffix('.npy')
+        classification_vectors[stimuli_code] = array
+
+    return classification_vectors
 
 if __name__ == '__main__':
-    # get classification vectors for mfcc
     parser = argparse.ArgumentParser(description="Calculate deltas for the model")
     
     parser.add_argument("-c", "--compute", type=bool, nargs="+", required=True, help="True if computing classification vectors is needed, False if already computed")
     parser.add_argument("-m", "--model", type=str, nargs="+", required=True, help="The model of the representation files for the experiment: mfcc, deepspeech, wav2vec")
     parser.add_argument("--train_dir", type=str, nargs="+", required=True)
-    parser.add_argument("--test_dir", type=str, nargs="+", required=True, help="True if computing classification vectors is needed, False if already computed")
+    parser.add_argument("--test_dir", type=str, nargs="+", required=True)
     parser.add_argument("--language", type=str, nargs="+", required=True)
     parser.add_argument("--cvec_dir", type=str, nargs="+", required=True)
-    parser.add_argument("--stim_data", type=str, nargs="+", required=True)
+    parser.add_argument("--stim_data_test", type=str, nargs="+", required=True)
+    parser.add_argument("--stim_data_train", type=str, nargs="+", required=True)
     parser.add_argument("--exp_data", type=str, nargs="+", required=True)
     parser.add_argument("--outfile", type=str, nargs="+", required=True)
     parser.add_argument("--doc_directory", type=str, nargs="+", required=True)
@@ -517,39 +458,34 @@ if __name__ == '__main__':
     test_dir = Path(commandline_input.test_dir[0])
     language = commandline_input.language[0]
     classification_vector_dir = Path(commandline_input.cvec_dir[0])
-    stimuli_data = Path(commandline_input.stim_data[0])
+    stimuli_data_test = Path(commandline_input.stim_data_test[0])
+    stimuli_data_train = Path(commandline_input.stim_data_train[0])
     experimental_data = Path(commandline_input.exp_data[0])
     outfile = Path(commandline_input.outfile[0])
     doc_directory = commandline_input.doc_directory[0]
-
+    
+    print("starting identification experiment...")
+    X_test, y_test, stimulus_ABX_code_test = load_testing_data(test_dir, stimuli_data_test)
     if compute:
-        if model == 'mfcc':
-            print('MFCC') 
-            X_train_mfcc, y_train_mfcc = load_training_data(train_dir, language)
-            X_test_mfcc, y_test_mfcc, stimulus_ABX_code_test_mfcc = load_testing_data(test_dir, stimuli_data)
-            average_classification_vectors_mfcc, classification_vectors_mfcc = kNN_regression(X_train_mfcc, X_test_mfcc, y_train_mfcc, y_test_mfcc, k, model, stimulus_ABX_code_test_mfcc, classification_vector_dir)
-            export_identification_data(average_classification_vectors_mfcc, set(y_train_mfcc), set(y_test_mfcc), doc_directory, model)
-            ABX_task([], X_test_mfcc, stimulus_ABX_code_test_mfcc, model+"_raw_", experimental_data, Path("temp")) #fix
-            ABX_task(FRENCH_WANTED_VOWELS, classification_vectors_mfcc, stimulus_ABX_code_test_mfcc, model+"_", Path("temp"), outfile)
-            print('AVERAGE CLASSIFICATION VECTORS:')
-            print(average_classification_vectors_mfcc)
+        print(f"creating classification vectors for {model} data...") 
+        X_train, y_train = load_training_data(train_dir, language, stimuli_data_train)
+        average_classification_vectors, classification_vectors = kNN_regression(X_train, X_test, y_train, y_test, int(math.sqrt(len(y_train))), model, stimulus_ABX_code_test, classification_vector_dir)
+        print(f"done creating classification vectors for {model} data.")
+    else:
+        print(f"loading classification vectors from {classification_vector_dir}...")
+        classification_vectors = load_classification_vectors(classification_vector_dir)
+        print(f"done loading classification vectors from {classification_vector_dir}.")
 
+    print("exporting identification results...")
+    export_identification_data(average_classification_vectors, set(y_train), set(y_test), doc_directory, model)
+    print("done exporting identification results.")
 
-        if model == 'deepspeech':
-            print('DEEPSPEECH')
-            # get classification vectors for deepspeech
-            X_train_deepspeech, y_train_deepspeech = load_training_data(Path('/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/word_reps/cut_word_deepspeech/'), Path('/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/ai_reps/cut_ai_deepspeech/'))
-            X_test_deepspeech, y_test_deepspeech, stimulus_ABX_code_test_deepspeech = load_testing_data(Path('/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/world_vowels_reps/cut_wv_deepspeech'))
-            average_classification_vectors_deepspeech, classification_vectors_deepspeech = kNN_regression(X_train_deepspeech, X_test_deepspeech, y_train_deepspeech, y_test_deepspeech, k, 'wv_deepspeech_class_vectors', stimulus_ABX_code_test_deepspeech, '/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/world_vowels_reps/class_vec_wv_deepspeech/')
-            print('CLASSIFICATION VECTORS FOR COSINE DIFFERENCE:')
-            print(average_classification_vectors_deepspeech)
+    print("starting kNN experiment for discrimination data")
+    ABX_task([], X_test, stimulus_ABX_code_test, model+"_raw_", experimental_data, Path("temp"))
+    ABX_task(FRENCH_WANTED_VOWELS, classification_vectors, stimulus_ABX_code_test, model+"_", Path("temp"), outfile)
+    print("experiment complete.")
 
-        if model == 'wav2vec':
-            print('WAV2VEC')
-            # get classification vectors for wav2vec
-            X_train_wav2vec, y_train_wav2vec = load_training_data(Path('/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/word_reps/cut_word_wav2vec/'), Path('/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/ai_reps/cut_ai_wav2vec/'))
-            X_test_wav2vec, y_test_wav2vec, stimulus_ABX_code_test_wav2vec = load_testing_data(Path('/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/world_vowels_reps/cut_wv_wav2vec'))
-            average_classification_vectors_wav2vec, classification_vectors_wav2vec = kNN_regression(X_train_wav2vec, X_test_wav2vec, y_train_wav2vec, y_test_wav2vec, k, 'wv_wav2vec_class_vectors', stimulus_ABX_code_test_wav2vec, '/mnt/efs/fs1/ec2-user/discrimination_modeling/NN_work/vowels/model_reps/world_vowels_reps/class_vec_wv_wav2vec/')
-            print('CLASSIFICATION VECTORS FOR COSINE DIFFERENCE:')
-            print(average_classification_vectors_wav2vec)
+    # example usage:
+    # python general_NN_vowels.py -c True -m wav2vec --train_dir /home/paulie/scratch/categorical_analysis/model_reps/reference/cut_wav2vec/ --test_dir /home/paulie/scratch/categorical_analysis/model_reps/test/cut_wav2vec/ --language fre --cvec_dir /home/paulie/scratch/categorical_analysis/classification_vectors/wav2vec/ --stim_data_test /home/paulie/scratch/categorical_analysis/docs/WorldVowels_stimuli\ \(1\).csv --stim_data_train /home/paulie/scratch/categorical_analysis/docs/all_timestamps_reference.csv --exp_data /home/paulie/scratch/categorical_analysis/docs/all_discrimination.csv --outfile /home/paulie/scratch/categorical_analysis/docs/wav2vec_identification.csv --doc_directory /home/paulie/scratch/categorical_analysis/docs/
 
+    # python general_NN_vowels.py -c True -m mfcc --train_dir /home/paulie/scratch/categorical_analysis/model_reps/reference/cut_mfcc/ --test_dir /home/paulie/scratch/categorical_analysis/model_reps/test/cut_mfcc/ --language fre --cvec_dir /home/paulie/scratch/categorical_analysis/classification_vectors/mfcc/ --stim_data_test /home/paulie/scratch/categorical_analysis/docs/WorldVowels_stimuli\ \(1\).csv --stim_data_train /home/paulie/scratch/categorical_analysis/docs/all_timestamps_reference.csv --exp_data /home/paulie/scratch/categorical_analysis/docs/all_discrimination.csv --outfile /home/paulie/scratch/categorical_analysis/docs/mfcc_identification.csv --doc_directory /home/paulie/scratch/categorical_analysis/docs/
