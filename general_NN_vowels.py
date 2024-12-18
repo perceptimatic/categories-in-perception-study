@@ -413,7 +413,7 @@ def ABX_task(train_labels, class_vec_or_X_test_model, stimulus_ABX_code_test, mo
 
 
 def export_identification_data(average_classification_vectors, train_labels, test_labels, doc_directory, model):
-    with open(doc_directory + model + "class_vecs_avgs.csv", mode='w', newline='') as file:
+    with open(doc_directory + model + '_' + "class_vecs_avgs.csv", mode='w', newline='') as file:
         writer = csv.writer(file)
     
         # Write header
