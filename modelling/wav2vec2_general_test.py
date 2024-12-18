@@ -245,11 +245,18 @@ class Prediction:
 
     def __init__(self, folder, fname, gpu=0, asr = False):
         print('initialising')
-        self.gpu = gpu
-        self.model = PretrainedWav2Vec2Model(folder, fname, asr = asr).cuda(gpu)
+        if (torch.cuda.is_available()):
+            self.gpu = gpu
+            self.model = PretrainedWav2Vec2Model(folder, fname, asr = asr).cuda(gpu)
+        else:
+            self.gpu = None
+            self.model = PretrainedWav2Vec2Model(folder, fname, asr = asr)
 
     def __call__(self, x, feat_only):
-        x = torch.from_numpy(x).float().cuda(self.gpu)
+        if self.gpu:
+            x = torch.from_numpy(x).float().cuda(self.gpu)
+        else:
+            x = torch.from_numpy(x).float()
         with torch.no_grad():
             #print('x shape', x.shape)
             #print('x uns', x.unsqueeze(0).shape)
@@ -277,7 +284,7 @@ class EmbeddingDatasetWriter(object):
             csv_file = '' # file with input data
     ):
         print('In writer')
-        assert os.path.exists(model_fname)
+        #assert os.path.exists(model_fname)
 
         self.model_fname = model_fname
         self.model_folder = model_folder
@@ -358,7 +365,7 @@ class EmbeddingDatasetWriter(object):
             lambda x: os.path.join(
                 self.output_path, x.replace("." + self.extension, ".npy")
             ),
-            map(lambda x: x.replace(self.input_root, '')[1:], paths),
+            map(lambda x: x.replace(self.input_root, ''), paths),
         )
         # count = 0
         for name, target_fname in self._progress(

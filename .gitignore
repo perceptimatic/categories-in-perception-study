@@ -7,7 +7,12 @@
 *.pt
 *LMEDS*
 audio/
+*.wav
 venv
 modelling/dtw.c
 modelling/dtw.*.so
 modelling/build/
+modelling/__pycache__/
+modelling/reps/
+modelling/checkpoints/
+*.npy

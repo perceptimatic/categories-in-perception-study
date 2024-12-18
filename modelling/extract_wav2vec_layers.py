@@ -43,5 +43,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     #stimuli_path_wav = "/gpfswork/rech/tub/uzz69cv/wav_to_transform/wordvowels16000"  # replace this by the path to your stimuli to transform (extracted not source otherwise it will not work)
 
-    for lay in [  'transf_4']: # change this list to the layers you want
+    for lay in [  'transf_4', 'transf_5', 'transf_6', 'transf_7', 'transf_8', 'transf_9', 'transf_10', 'transf_11', 'transf_12']: # change this list to the layers you want
         main(lay, PATHOUTPUT=args.PATHOUT + '/' + ''.join(lay.split('_')), FOLDERCHECKPOINT=args.folder_check, FNAMECHECKPOINT=args.fname_check, stimuli_path_wav=args.stimuli_fold, stimuli_csv=args.stimuli_transf)
