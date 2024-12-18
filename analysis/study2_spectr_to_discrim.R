@@ -25,15 +25,7 @@ source(paste0(SCRIPTS, "/discrimination.R"))
 source(paste0(SCRIPTS, "/identification.R"))
 source(paste0(SCRIPTS, "/plotting.R"))
 source(paste0(SCRIPTS, "/regression.R"))
-
-calculate_all_deltas <- function(d) {
-  for (col_tgt in names(d)[grepl("distance_tgt$", names(d))]) {
-    col_oth <- sub("_tgt$", "_oth", col_tgt)
-    col_delta <- sub("distance_tgt$", "delta", col_tgt)
-    d[[col_delta]] <- (d[[col_oth]] - d[[col_tgt]])
-  }
-  return(d)
-}
+source(paste0(SCRIPTS, "/delta.R"))
 
 distances <- readr::read_csv("discrimination_exp/triplet_data_study2.csv",
                              col_types=cols(TGT_first = col_logical(),
@@ -377,3 +369,5 @@ ggsave(
 loo_compare(models$ordinal_doverlap_dfb, models$ordinal_doverlap)
 loo_compare(models$ordinal_doverlap_dfbavg, models$ordinal_doverlap)
 loo_compare(models$ordinal_doverlap_dfbavg, models$ordinal_doverlap_dfb)
+loo_compare(models$ordinal_doverlap_dfbavg, models$ordinal_dfbavg)
+loo_compare(models$ordinal_doverlap_dfbavg, models$ordinal_doverlap_dfbavg_nodfbavg)
