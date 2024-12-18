@@ -4,6 +4,7 @@
 .Ruserdata
 *.Rproj
 *.[Rr]ds
+*.pt
 *LMEDS*
 audio/
 venv
