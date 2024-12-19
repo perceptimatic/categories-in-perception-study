@@ -12,6 +12,9 @@ import numpy as np
 
 
 def main(input_directory, csv_file, ckpt_path, layer, feat_dir, max_chunk):
+    print(ckpt_path)
+    if not os.path.exists(feat_dir):
+        os.makedirs(feat_dir)
     reader = HubertFeatureReader(ckpt_path, layer, max_chunk)
     if csv_file != '': # then it means it is a csv file
         f = open(csv_file, 'r')
@@ -37,10 +40,11 @@ if __name__ == "__main__":
     parser.add_argument("input_directory")
     parser.add_argument("csv_file")
     parser.add_argument("ckpt_path")
-    parser.add_argument("layer", type=str)
     parser.add_argument("feat_dir")
+    parser.add_argument('layers', type=str, help='layers to extract')
     parser.add_argument("--max_chunk", type=int, default=1600000)
     args = parser.parse_args()
     #logger.info(args)
 
-    main(**vars(args))
+    for layer in args.layers.split(","): 
+        main(args.input_directory, args.csv_file, args.ckpt_path, layer, args.feat_dir + '/' + layer, args.max_chunk)

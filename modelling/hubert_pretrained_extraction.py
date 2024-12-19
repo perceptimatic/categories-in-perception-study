@@ -112,7 +112,11 @@ class HubertFeatureReader(object):
             cfg,
             task,
         ) = fairseq.checkpoint_utils.load_model_ensemble_and_task([ckpt_path])
-        self.model = model[0].eval().cuda()
+        if (torch.cuda.is_available()):
+            self.model = model[0].eval().cuda()
+        else:
+            self.model = model[0].eval()
+        print(self.model)
         self.task = task
         self.layer = layer
         self.max_chunk = max_chunk
@@ -132,7 +136,10 @@ class HubertFeatureReader(object):
     def get_feats(self, path, ref_len=None):
         x = self.read_audio(path, ref_len)
         with torch.no_grad():
-            x = torch.from_numpy(x).float().cuda()
+            if (torch.cuda.is_available()):
+                x = torch.from_numpy(x).float().cuda()
+            else:
+                x = torch.from_numpy(x).float()
             if self.task.cfg.normalize:
                 x = F.layer_norm(x, x.shape)
             x = x.view(1, -1)
@@ -148,10 +155,7 @@ class HubertFeatureReader(object):
                     features_only=True,
                     output_layer=self.layer,
                 )
-                print(feat_chunk.shape)
 
                 feat.append(feat_chunk)
-        print(np.concatenate(feat, 1).shape)
-        print(np.concatenate(feat, 1).squeeze(0).shape)
         return np.concatenate(feat, 1).squeeze(0)
 
