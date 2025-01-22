@@ -34,7 +34,7 @@ distances <- readr::read_csv("discrimination_exp/triplet_data_study2.csv",
                                             .default = col_guess())) %>%
   calculate_all_deltas() %>%
   clean_discrimination_items() %>%
-  mutate(`Δ DTW Mel Filterbank`=fb_dtw_cosine_delta)
+  mutate(`Δ DTW Mel Filterbank`=`fb_dtw_cosine_Δ`)
   
 distances_by_contrast <- repeated_average(
   distances,
@@ -45,8 +45,8 @@ distances_by_contrast <- repeated_average(
     "Phone Contrast (Language)"
   ),
   c("Phone Language (Code)", "Phone Language (Long)"),
-  names(distances)[grepl("_delta$", names(distances))]
-) %>% rename(`Δ DTW Mel Filterbank`=fb_dtw_cosine_delta)
+  names(distances)[grepl("_Δ$", names(distances))]
+) %>% rename(`Δ DTW Mel Filterbank`=`fb_dtw_cosine_Δ`)
 
 discr_by_contrast_distances <- left_join(
   discriminability_by_contrast,
@@ -102,21 +102,6 @@ overlap_by_fb_plot <- ggplot(
   )  +
   coord_cartesian(ylim = c(0, 1))
 
-discr_distances <- left_join(
-  discrimination,
-  distances
-) %>% left_join(
-  rename(discr_by_contrast_distances,
-         `Δ DTW Mel Filterbank (Phone Contrast)`=`Δ DTW Mel Filterbank`) %>%
-    select(`Δ DTW Mel Filterbank (Phone Contrast)`, `Δ Overlap`, Overlap,
-           `Phone Language (Long)`, `Phone Language (Code)`,
-           `Phone Contrast (Language)`, `Listener Group`),
-  by = c(
-    "Phone Language (Long)",
-    "Phone Language (Code)",
-    "Phone Contrast (Language)",
-    "Listener Group")) 
-
 
 if (INTERACTIVE) {
   print(certaccuracy_by_fb_plot)
@@ -140,6 +125,8 @@ if (INTERACTIVE) {
   )    
 }
 
+
+
 print(with(filter(discr_by_contrast_distances, `Δ DTW Mel Filterbank` <= 0.025),
     cor(`Δ DTW Mel Filterbank`, `Accuracy and Certainty`)))
 print(summary(lm(`Accuracy and Certainty` ~ `Δ DTW Mel Filterbank`,
@@ -150,6 +137,23 @@ print(with(filter(discr_by_contrast_distances, `Δ DTW Mel Filterbank` > 0.025),
 print(summary(lm(`Accuracy and Certainty` ~ `Δ DTW Mel Filterbank`,
          data=filter(discr_by_contrast_distances, `Δ DTW Mel Filterbank` > 0.025) %>%
            mutate(`Δ DTW Mel Filterbank`=`Δ DTW Mel Filterbank`/0.05))))
+
+discr_distances <- left_join(
+  discrimination,
+  distances
+) %>% left_join(
+  rename(discr_by_contrast_distances,
+         `Δ DTW Mel Filterbank (Phone Contrast)`=`Δ DTW Mel Filterbank`) %>%
+    select(`Δ DTW Mel Filterbank (Phone Contrast)`, `Δ Overlap`, Overlap,
+           `Phone Language (Long)`, `Phone Language (Code)`,
+           `Phone Contrast (Language)`, `Listener Group`),
+  by = c(
+    "Phone Language (Long)",
+    "Phone Language (Code)",
+    "Phone Contrast (Language)",
+    "Listener Group")) 
+
+
 
 model_specs <- list(
   ordinal_null = list(
