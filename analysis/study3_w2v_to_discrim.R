@@ -31,7 +31,8 @@ source(paste0(SCRIPTS, "/delta.R"))
 distances <- bind_rows(
   bind_rows(
     read_delta("discrimination_exp/triplet_data_w2v_french.csv", layers=TRUE),
-    read_delta("discrimination_exp/triplet_data_hubert_french.csv", layers=TRUE),
+#    read_delta("discrimination_exp/triplet_data_hubert_french.csv", layers=TRUE),
+    read_delta("discrimination_exp/triplet_data_hubert_french_retrained_aws.csv", layers=TRUE),
     read_delta("discrimination_exp/triplet_data_study2.csv") %>%
       filter(Model == "fb_dtw_cosine")
   ) %>% mutate(`Listener Group`="French"),
@@ -176,23 +177,26 @@ if (INTERACTIVE) {
   
 # Conclusion: Focusing on last layer of HuBERT
 
+# For the preliminary AWS model, let's focus, rather, on Layer 6...
+
 scale_and_recenter <- function(x) {
   s <- scale(x)
   c(s) + attr(s, "scaled:center")
 }
 
-distances_h12 <- filter(distances, Model=="HuBERT (Transformer)", Layer==12) %>%
+LAYER <- 6
+distances_h12 <- filter(distances, Model=="HuBERT (Transformer)", Layer==LAYER) %>%
   rename(`Δ HuBERT`=`Δ Model`)
 distances_by_contrast_h12 <- filter(distances_by_contrast,
-                                    Model=="HuBERT (Transformer)", Layer==12) %>%
+                                    Model=="HuBERT (Transformer)", Layer==LAYER) %>%
   rename(`Δ HuBERT`=`Δ Model`)
 discr_by_contrast_distances_h12 <- filter(discr_by_contrast_distances,
                                           Model=="HuBERT (Transformer)",
-                                          Layer==12) %>%
+                                          Layer==LAYER) %>%
   rename(`Δ HuBERT`=`Δ Model`)
 
 discr_by_contrast_distances_h12 <- filter(discr_by_contrast_distances,
-         Model=="HuBERT (Transformer)", Layer==12) %>%
+         Model=="HuBERT (Transformer)", Layer==LAYER) %>%
     rename(`Δ HuBERT`=`Δ Model`) %>%
     mutate(`Δ HuBERT (Scaled)`=scale_and_recenter(`Δ HuBERT`))
 
@@ -241,6 +245,8 @@ print(
   
 
 # HuBERT is better correlated with overlap, but still best correlated with MFB
+# Note that this is no longer true across the "good" layers for the new model,
+# and they (HuBERT and MFB) are much, much closer now.
 
 
  
@@ -260,8 +266,12 @@ discr_distances_h12 <- left_join(
     "Listener Group")) 
 
 discr_distances_h12_swapped <- discr_distances_h12 %>%
-  select(`Listener Group`, `filename`, `Δ HuBERT`, `Δ HuBERT (Phone Contrast)`) %>%
-  rename(`Δ HuBERT Other Language`=`Δ HuBERT`, `Δ HuBERT Other Language (Phone Contrast)`=`Δ HuBERT (Phone Contrast)`) %>%
+  select(`Listener Group`, `filename`, `Δ HuBERT`, `Δ HuBERT (Phone Contrast)`,
+         `Δ Overlap`, Overlap) %>%
+  rename(`Δ HuBERT Other Language`=`Δ HuBERT`,
+         `Δ HuBERT Other Language (Phone Contrast)`=`Δ HuBERT (Phone Contrast)`,
+         `Δ Overlap Other Language`=`Δ Overlap`,
+         `Overlap Other Language`=Overlap) %>%
   mutate(`Listener Group`=ifelse(`Listener Group` == "English", "French", "English")) %>%
   distinct()
 
@@ -269,7 +279,15 @@ discr_distances_h12 <- left_join(discr_distances_h12, discr_distances_h12_swappe
   mutate(`Δ HuBERT English`=ifelse(`Listener Group`=="English", `Δ HuBERT`, `Δ HuBERT Other Language`),
          `Δ HuBERT French`=ifelse(`Listener Group`=="English", `Δ HuBERT Other Language`, `Δ HuBERT`),
          `Δ HuBERT English (Phone Contrast)`=ifelse(`Listener Group`=="English", `Δ HuBERT (Phone Contrast)`, `Δ HuBERT Other Language (Phone Contrast)`),
-         `Δ HuBERT French (Phone Contrast)`=ifelse(`Listener Group`=="English", `Δ HuBERT Other Language (Phone Contrast)`, `Δ HuBERT (Phone Contrast)`))
+         `Δ HuBERT French (Phone Contrast)`=ifelse(`Listener Group`=="English", `Δ HuBERT Other Language (Phone Contrast)`, `Δ HuBERT (Phone Contrast)`),
+         `Δ Overlap English`=ifelse(`Listener Group`=="English", `Δ Overlap`, `Δ Overlap Other Language`),
+         `Δ Overlap French`=ifelse(`Listener Group`=="English", `Δ Overlap Other Language`, `Δ Overlap`),
+         `Overlap English`=ifelse(`Listener Group`=="English", `Overlap`, `Overlap Other Language`),
+         `Overlap French`=ifelse(`Listener Group`=="English", `Overlap Other Language`, `Overlap`),
+         `Δ HuBERT Avg`=(`Δ HuBERT English` + `Δ HuBERT French`)/2,
+         `Δ HuBERT Avg (Phone Contrast)`=(`Δ HuBERT English (Phone Contrast)` + `Δ HuBERT French (Phone Contrast)`)/2,
+         `Δ Overlap Avg`=(`Δ Overlap English` + `Δ Overlap French`)/2,
+         `Overlap Avg`=(`Overlap English` + `Overlap French`)/2)
 
 discr_distances_melf <-  left_join(
   discrimination,
@@ -295,11 +313,100 @@ m_overlap <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap`*`Listener Group`
            data=discr_distances_h12, REML=FALSE,
            control=lmerControl(optimizer="Nelder_Mead"))
 
+m_overlape <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap English`*`Listener Group` +
+                          `Listener Group`*`Trial Number` +
+             (1|Participant) + (1 + `Listener Group`|filename),
+           data=discr_distances_h12, REML=FALSE,
+           control=lmerControl(optimizer="Nelder_Mead"))
+
+m_overlapf <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap French`*`Listener Group` +
+                          `Listener Group`*`Trial Number` +
+             (1|Participant) + (1 + `Listener Group`|filename),
+           data=discr_distances_h12, REML=FALSE,
+           control=lmerControl(optimizer="Nelder_Mead"))
+
+
+m_overlapa <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap Avg`*`Listener Group` +
+                           `Listener Group`*`Trial Number` +
+                           (1|Participant) + (1 + `Listener Group`|filename),
+                         data=discr_distances_h12, REML=FALSE,
+                         control=lmerControl(optimizer="Nelder_Mead"))
+
+m_overlaps <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap Other Language`*`Listener Group` +
+                           `Listener Group`*`Trial Number` +
+                           (1|Participant) + (1 + `Listener Group`|filename),
+                         data=discr_distances_h12, REML=FALSE,
+                         control=lmerControl(optimizer="Nelder_Mead"))
+
+m_overlap_ldec <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap Avg`*`Listener Group` +
+                               I((`Δ Overlap` - `Δ Overlap Avg`)/0.2)*`Listener Group` +
+                           `Listener Group`*`Trial Number` +
+                           (1|Participant) + (1 + `Listener Group`|filename),
+                         data=discr_distances_h12, REML=FALSE,
+                         control=lmerControl(optimizer="Nelder_Mead"))
+
+
 m_hubert <- lme4::lmer(`Accuracy and Certainty` ~ I(`Δ HuBERT`/0.25)*`Listener Group` +
                           `Listener Group`*`Trial Number` +
              (1|Participant) + (1 + `Listener Group`|filename),
            data=discr_distances_h12, REML=FALSE,
            control=lmerControl(optimizer="Nelder_Mead"))
+
+
+m_hubert_ldec <- lme4::lmer(`Accuracy and Certainty` ~ (I((`Δ HuBERT` - `Δ HuBERT Avg`)/0.05) + I((`Δ HuBERT Avg`)/0.25))*`Listener Group` +
+                         `Listener Group`*`Trial Number` +
+                         (1|Participant) + (1 + `Listener Group`|filename),
+                       data=discr_distances_h12, REML=FALSE,
+                       control=lmerControl(optimizer="Nelder_Mead"))
+
+m_hubert_avg_vs_melf <- lme4::lmer(`Accuracy and Certainty` ~ (I((`Δ HuBERT Avg`/0.25 - `Δ DTW Mel Filterbank`/0.05)/0.5) +
+                                                                   I(`Δ DTW Mel Filterbank`/0.05))*`Listener Group` +
+                              `Listener Group`*`Trial Number` +
+                              (1|Participant) + (1 + `Listener Group`|filename),
+                            data=left_join(select(discr_distances_melf, -distance_tgt, -distance_oth), select(discr_distances_h12, -distance_tgt, -distance_oth, -Model, -Layer)),
+                            REML=FALSE,
+                            control=lmerControl(optimizer="Nelder_Mead"))
+
+
+m_hubert_avg_vs_overlap <- lme4::lmer(`Accuracy and Certainty` ~ (I((`Δ HuBERT Avg (Phone Contrast)`/0.25 - `Δ Overlap Avg`)/0.5) +
+                                                                 I(`Δ Overlap Avg`))*`Listener Group` +
+                                     `Listener Group`*`Trial Number` +
+                                     (1|Participant) + (1 + `Listener Group`|filename),
+                                   data=left_join(select(discr_distances_melf, -distance_tgt, -distance_oth), select(discr_distances_h12, -distance_tgt, -distance_oth, -Model, -Layer)),
+                                   REML=FALSE,
+                                   control=lmerControl(optimizer="Nelder_Mead"))
+
+m_hubert_avg_vs_overlap_vs_melf <- lme4::lmer(`Accuracy and Certainty` ~ (I((`Δ HuBERT Avg (Phone Contrast)`/0.25 - `Δ Overlap Avg`)/0.5) +
+                                                                 I((`Δ Overlap Avg` - `Δ DTW Mel Filterbank (Phone Contrast)`/0.05 - 0.2)/0.4) +
+                                                                   I(`Δ DTW Mel Filterbank (Phone Contrast)`/0.05) +
+                                                                 I((`Δ Overlap` - `Δ Overlap Avg`)/0.2))*`Listener Group` +
+                                     `Listener Group`*`Trial Number` +
+                                     (1|Participant) + (1 + `Listener Group`|filename),
+                                   data=left_join(select(discr_distances_melf, -distance_tgt, -distance_oth), select(discr_distances_h12, -distance_tgt, -distance_oth, -Model, -Layer)),
+                                   REML=FALSE,
+                                   control=lmerControl(optimizer="Nelder_Mead"))
+
+
+m_hubert_avg_vs_overlap_full <- lme4::lmer(`Accuracy and Certainty` ~ (I((`Δ HuBERT Avg (Phone Contrast)`/0.25 - `Δ Overlap Avg`)/0.5) +
+                                                                            I((`Δ Overlap Avg`)) +
+                                                                            I((`Δ Overlap` - `Δ Overlap Avg`)/0.2))*`Listener Group` +
+                                                `Listener Group`*`Trial Number` +
+                                                (1|Participant) + (1 + `Listener Group`|filename),
+                                              data=left_join(select(discr_distances_melf, -distance_tgt, -distance_oth), select(discr_distances_h12, -distance_tgt, -distance_oth, -Model, -Layer)),
+                                              REML=FALSE,
+                                              control=lmerControl(optimizer="Nelder_Mead"))
+
+
+m_overlap_full_vs_melf <- lme4::lmer(`Accuracy and Certainty` ~ (I((`Δ Overlap Avg` - `Δ DTW Mel Filterbank (Phone Contrast)`/0.05 - 0.2)/0.4) +
+                                                                            I(`Δ DTW Mel Filterbank (Phone Contrast)`/0.05) +
+                                                                            I((`Δ Overlap` - `Δ Overlap Avg`)/0.2))*`Listener Group` +
+                                                `Listener Group`*`Trial Number` +
+                                                (1|Participant) + (1 + `Listener Group`|filename),
+                                              data=left_join(select(discr_distances_melf, -distance_tgt, -distance_oth), select(discr_distances_h12, -distance_tgt, -distance_oth, -Model, -Layer)),
+                                              REML=FALSE,
+                                              control=lmerControl(optimizer="Nelder_Mead"))
+
+
 
 
 m_hubert_bycon <- lme4::lmer(`Accuracy and Certainty` ~ I(`Δ HuBERT (Phone Contrast)`/0.25)*`Listener Group` +
@@ -359,6 +466,18 @@ m_overlap_melf_bycon <- lme4::lmer(`Accuracy and Certainty` ~
                              data=discr_distances_melf, REML=FALSE,
                              control=lmerControl(optimizer="Nelder_Mead"))
 
+m_hubert_decomp_ldec <- lme4::lmer(`Accuracy and Certainty` ~
+                                 (I((`Δ HuBERT (Phone Contrast)` - `Δ HuBERT Avg (Phone Contrast)`)/0.05) +
+                                    I(`Δ HuBERT Avg (Phone Contrast)`/0.25) +
+                                    I((`Δ HuBERT Avg` - `Δ HuBERT Avg (Phone Contrast)`)/0.1) +
+                                    I((`Δ HuBERT` - `Δ HuBERT Avg` - `Δ HuBERT (Phone Contrast)` + 0.05)/0.05))*`Listener Group` +
+                                 `Listener Group`*`Trial Number` +
+                                 (1|Participant) + (1 + `Listener Group`|filename),
+                               data=discr_distances_h12, REML=FALSE,
+                               control=lmerControl(optimizer="Nelder_Mead"))
+
+
+
 m_hubert_decomp <- lme4::lmer(`Accuracy and Certainty` ~
                                  (I(`Δ HuBERT (Phone Contrast)`/0.25) + I((`Δ HuBERT` - `Δ HuBERT (Phone Contrast)`)/0.25))*`Listener Group` +
                                  `Listener Group`*`Trial Number` +
@@ -389,6 +508,12 @@ m_hubertf_decomp <- lme4::lmer(`Accuracy and Certainty` ~
                               data=discr_distances_h12, REML=FALSE,
                               control=lmerControl(optimizer="Nelder_Mead"))
 
+m_huberta_decomp <- lme4::lmer(`Accuracy and Certainty` ~
+                                 (I(`Δ HuBERT Avg (Phone Contrast)`/0.25) + I((`Δ HuBERT Avg` - `Δ HuBERT Avg (Phone Contrast)`)/0.25))*`Listener Group` +
+                                 `Listener Group`*`Trial Number` +
+                                 (1|Participant) + (1 + `Listener Group`|filename),
+                               data=discr_distances_h12, REML=FALSE,
+                               control=lmerControl(optimizer="Nelder_Mead"))
 
 
 m_melf_decomp <- lme4::lmer(`Accuracy and Certainty` ~
@@ -693,6 +818,7 @@ m_overlap_nor <- lme4::lmer(`Accuracy and Certainty` ~ `Δ Overlap`*`Listener Gr
 
 print(AIC(m_null, m_hubert, m_hubert_bycon, m_overlap, m_melf, m_melf_bycon, m_overlap_hubert, m_overlap_melf,
           m_hubert_decomp, m_melf_decomp,
+          m_overlape, m_overlapf,
     m_overlap_hubert_bycon, m_overlap_melf_bycon, m_overlap_hubert_resid, m_overlap_melf_resid,
     m_overlap_hubert_decomp, m_overlap_melf_decomp, m_overlap_both_decomp,
     m_huberts_decomp, 
@@ -880,6 +1006,64 @@ print(arrange(AIC(m_mfb_decomp_freon, m_overlap_mfb_decomp_freon, m_hubert_decom
 
 # Temporary models: start here - switch to ordinal
 # Also share models between study 2 and study 3 (null, mfb)
+
+# Why the advantage for monolingual models?
+# Hypothesis: relative advantage for overlap vs MFB predicts advantage of native vs (best) mono
+
+quality <- function(m) -log(abs(resid(m, scaled=TRUE)))
+advantage <- function(m1, m2) quality(m1) - quality(m2)
+
+hist(quality(m_overlap))
+hist(quality(m_hubert_decomp))
+plot(quality(m_overlap), quality(m_hubert_decomp))
+plot(quality(m_overlap), quality(m_melf_decomp))
+plot(quality(m_hubert_decomp), quality(m_melf_decomp))
+
+# Not true:
+plot(advantage(m_overlap, m_melf_decomp),
+     advantage(m_hubert_decomp, m_huberte_decomp))
+
+plot(advantage(m_overlap, m_melf_decomp),
+     advantage(m_hubert_decomp, m_huberta_decomp))
+
+# Tentative conclusion: the difference between native and mono isn't about
+# phonology vs acoustics. Rather, it's about differences vs commonalities
+# between English and French phonology.
+
+# New hypothesis: relative advantage for native vs mono overlap predicts
+# advantage of native vs mono HuBERT
+
+# Not true:
+plot(advantage(m_overlap, m_overlape),
+     advantage(m_hubert_decomp, m_huberte_decomp))
+plot(advantage(m_overlap, m_overlapa),
+     advantage(m_hubert_decomp, m_huberta_decomp))
+plot(advantage(m_overlap, m_overlaps),
+     advantage(m_hubert_decomp, m_huberts_decomp))
+
+# The only thing that is actually true is that the advantage of Overlap
+# over MFB is related to the advantage of HuBERT over MFB
+
+plot(advantage(m_overlap, m_melf_decomp),
+     advantage(m_hubert_decomp, m_melf_decomp))
+plot(advantage(m_overlapa, m_melf_decomp),
+     advantage(m_huberta_decomp, m_melf_decomp))
+
+# Notice that Overlap shows language-specific effects whereas HuBERT shows far less
+summary(m_overlap_ldec)
+summary(m_hubert_ldec)
+
+# Nevertheless, HuBERT Avg and Melf are complementary, meaning they
+# both do something, whether or not Overlap is included in the model:
+summary(m_hubert_avg_vs_overlap_vs_melf)
+summary(m_hubert_avg_vs_melf)
+
+# It's just that that "thing" can't be described as "recapitulating Melfs"
+# or "capturing language-specific effects that Overlap doesn't". It's learning
+# about "phonetics in general" (or at least, "phonetics common to English and
+# French"), but acoustics still matters.
+
+# New models (not there yet)
 
 model_specs <- list(
   ordinal_null = list(
