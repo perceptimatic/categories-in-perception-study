@@ -23,7 +23,7 @@ def skld(x, y, eps):
 
 def skld_cdist(rep_a, rep_b, eps=0.001):
     return scipy.spatial.distance.cdist(rep_a, rep_b,
-                                        metric=lambda x, y: skld(x, y, eps))
+                                        metric=lambda x, y: skld(x, y, eps)).astype(np.float32)
 
 def cosine_dist(rep_a, rep_b):
     return scipy.spatial.distance.cdist(rep_a, rep_b,

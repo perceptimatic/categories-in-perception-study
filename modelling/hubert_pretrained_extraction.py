@@ -53,8 +53,8 @@ def forward_for_featurizer(
         source,
         target_list = None,
         padding_mask= None,
+        features_only=True, # FIXME - Remove??
         mask=True,
-        features_only=False,
         output_layer= None,
 ) :
     """output layer is 1-based"""
@@ -83,26 +83,35 @@ def forward_for_featurizer(
 
     if mask:
         x, mask_indices = model.apply_mask(
-            features, padding_mask, target_list
+            features, padding_mask, target_list # ??? FIXME ???
         )
     else:
         x = features
         mask_indices = None
 
-    # feature: (B, T, D), float
-    # target: (B, T), long
-    # x: (B, T, D), float
-    # padding_mask: (B, T), bool
-    # mask_indices: (B, T), bool
-    x, _ = model.encoder(
-        x,
-        padding_mask=padding_mask,
-        layer=None if output_layer is None else int(output_layer.split('_')[1])
-    )
 
-    return x.cpu().numpy()
+    if 'transf' in output_layer:
+        x, _ = model.encoder(
+            x,
+            padding_mask=padding_mask,
+            layer=None if output_layer is None else int(output_layer.split('_')[1])
+        )
+        return x.cpu().numpy()
 
+    if 'logits' in output_layer:
+        x, _ = model.encoder(x, padding_mask=padding_mask)
+        x = model.final_proj(x)
+        x = torch.nn.functional.cosine_similarity(
+            x.swapaxes(0,1).repeat(1, model.label_embs_concat.shape[0], 1),
+            model.label_embs_concat, dim=-1)
+        x /= model.logit_temp
+        x = x.unsqueeze(0)
 
+        if 'softmax' in output_layer:
+            x = torch.nn.functional.softmax(x, dim=-1)
+        return x.cpu().numpy()
+
+    assert False
 
 
 class HubertFeatureReader(object):
