@@ -50,19 +50,30 @@ def window(rep_a, rep_b, distance, k):
 def get_filename(item_name, path):
     return os.path.join(path, item_name + ".npy")
 
-def get_rep(filename):
-    return np.load(filename)
+def get_rep(item_name, rep_location):
+    if isinstance(rep_location, str):
+        return np.load(get_filename(item_name, rep_location))
+    elif isinstance(rep_location, pd.DataFrame):
+        return rep_location.loc[rep_location['filename'] == item_name,:].drop('filename', axis=1).to_numpy()
+        
 
 def get_pair_name(name_a, name_b):
     return tuple(sorted((name_a, name_b)))
 
 def get_distance(name_a, name_b, distance, pooling, cached_distances, rep_path):
+    if os.path.isdir(rep_path):
+        rep_location = rep_path
+    elif os.path.isfile(rep_path):
+        rep_location = pd.read_csv(rep_path)
+    else:
+        raise RuntimeError()
+        
     pair_name = get_pair_name(name_a, name_b)
     try:
         d = cached_distances[pair_name]
     except KeyError:
-        rep_a = get_rep(get_filename(name_a, rep_path))
-        rep_b = get_rep(get_filename(name_b, rep_path))
+        rep_a = get_rep(name_a, rep_location)
+        rep_b = get_rep(name_b, rep_location)
         d = pooling(rep_a, rep_b, distance)
         cached_distances[pair_name] = d
     return d
