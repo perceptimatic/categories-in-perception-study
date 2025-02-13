@@ -15,4 +15,5 @@ modelling/build/
 modelling/__pycache__/
 modelling/reps/
 modelling/checkpoints/
+modelling/mfa/
 *.npy
