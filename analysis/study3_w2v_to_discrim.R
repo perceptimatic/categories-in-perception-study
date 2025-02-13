@@ -30,15 +30,16 @@ source(paste0(SCRIPTS, "/delta.R"))
 
 distances <- bind_rows(
   bind_rows(
-    read_delta("discrimination_exp/triplet_data_w2v_french.csv", layers=TRUE),
+    read_delta("discrimination_exp/triplet_data_w2v_french.csv"),
 #    read_delta("discrimination_exp/triplet_data_hubert_french.csv", layers=TRUE),
-    read_delta("discrimination_exp/triplet_data_hubert_french_retrained_aws.csv", layers=TRUE),
+#    read_delta("discrimination_exp/triplet_data_hubert_french_retrained_aws.csv", layers=TRUE),
+    read_delta("discrimination_exp/triplet_data_hubert_french_decll_retrained_further.csv"),
     read_delta("discrimination_exp/triplet_data_study2.csv") %>%
       filter(Model == "fb_dtw_cosine")
   ) %>% mutate(`Listener Group`="French"),
   bind_rows(
-    read_delta("discrimination_exp/triplet_data_w2v_english.csv", layers=TRUE),
-    read_delta("discrimination_exp/triplet_data_hubert_english.csv", layers=TRUE),
+    read_delta("discrimination_exp/triplet_data_w2v_english.csv"),
+    read_delta("discrimination_exp/triplet_data_hubert_english.csv"),
     read_delta("discrimination_exp/triplet_data_study2.csv") %>%
       filter(Model == "fb_dtw_cosine")
   ) %>% mutate(`Listener Group`="English")
@@ -76,7 +77,10 @@ discr_by_contrast_distances <- left_join(
   mutate(`Δ Overlap`=1-Overlap)
 
 certaccuracy_by_delta_plot <- ggplot(
-  discr_by_contrast_distances,
+  discr_by_contrast_distances %>%
+    mutate(Layer=ifelse(Model=="DTW Mel Filterbank", 0,
+                        ifelse(Model == "HuBERT (Logits)", 13,
+                               ifelse(Model == "HuBERT (Probabilities)", 14, Layer)))),
   aes(
     x = `Δ Model`,
     y = `Accuracy and Certainty`,
@@ -84,8 +88,10 @@ certaccuracy_by_delta_plot <- ggplot(
   )
 ) +
   geom_point(stroke = 0.8, shape = 21) +
-  facet_wrap(~ `Listener Group` + str_pad(Layer, 2), ncol=13, scales = "free_x") +
+  facet_wrap(~ `Listener Group` + str_pad(Layer, 2), ncol=15, scales = "free_x") +
   scale_fill_manual(values=c(`HuBERT (Transformer)`="black",
+                             `HuBERT (Logits)`="black",
+                             `HuBERT (Probabilities)`="black",
                               `wav2vec 2.0 (Transformer)`="white",
                               `DTW Mel Filterbank`="grey")) +
   cp_theme() +
@@ -98,7 +104,10 @@ certaccuracy_by_delta_plot <- ggplot(
   coord_cartesian(ylim = c(0, 3))
 
 overlap_by_delta_plot <- ggplot(
-  discr_by_contrast_distances,
+  discr_by_contrast_distances %>%
+    mutate(Layer=ifelse(Model=="DTW Mel Filterbank", 0,
+                        ifelse(Model == "HuBERT (Logits)", 13,
+                               ifelse(Model == "HuBERT (Probabilities)", 14, Layer)))),
   aes(
     x = `Δ Model`,
     y = `Δ Overlap`,
@@ -106,8 +115,10 @@ overlap_by_delta_plot <- ggplot(
   )
 ) +
   geom_point(stroke = 0.8, shape = 21) +
-  facet_wrap(~ `Listener Group` + str_pad(Layer, 2), ncol=13, scales = "free_x") +
+  facet_wrap(~ `Listener Group` + str_pad(Layer, 2), ncol=15, scales = "free_x") +
   scale_fill_manual(values=c(`HuBERT (Transformer)`="black",
+                             `HuBERT (Logits)`="black",
+                             `HuBERT (Probabilities)`="black",
                              `wav2vec 2.0 (Transformer)`="white",
                               `DTW Mel Filterbank`="grey")) +
   cp_theme() +
@@ -158,7 +169,11 @@ scorr <- discr_by_contrast_distances %>%
                names_to="Measure")
 
 correlation_plot <- ggplot(
-  scorr %>% mutate(Layer=ifelse(is.na(Layer), 12, Layer)),
+  scorr %>% 
+    mutate(Layer=ifelse(Model=="DTW Mel Filterbank", 0,
+                        ifelse(Model == "HuBERT (Logits)", 13,
+                               ifelse(Model == "HuBERT (Probabilities)", 14, Layer))),
+           Model=ifelse(str_starts(Model, "HuBERT"), "HuBERT", Model)),
   aes(
     x = Layer,
     y = `Spearman Correlation`,
@@ -184,19 +199,23 @@ scale_and_recenter <- function(x) {
   c(s) + attr(s, "scaled:center")
 }
 
-LAYER <- 6
-distances_h12 <- filter(distances, Model=="HuBERT (Transformer)", Layer==LAYER) %>%
+LAYER <- 12
+#distances_h12 <- filter(distances, Model=="HuBERT (Transformer)", Layer==LAYER) %>%
+distances_h12 <- filter(distances, Model=="HuBERT (Probabilities)") %>%
   rename(`Δ HuBERT`=`Δ Model`)
 distances_by_contrast_h12 <- filter(distances_by_contrast,
-                                    Model=="HuBERT (Transformer)", Layer==LAYER) %>%
+#                                    Model=="HuBERT (Transformer)", Layer==LAYER) %>%
+                                    Model=="HuBERT (Probabilities)") %>%
   rename(`Δ HuBERT`=`Δ Model`)
 discr_by_contrast_distances_h12 <- filter(discr_by_contrast_distances,
-                                          Model=="HuBERT (Transformer)",
-                                          Layer==LAYER) %>%
+#                                          Model=="HuBERT (Transformer)",
+                                          Model=="HuBERT (Probabilities)") %>%
+#                                          Layer==LAYER) %>%
   rename(`Δ HuBERT`=`Δ Model`)
 
 discr_by_contrast_distances_h12 <- filter(discr_by_contrast_distances,
-         Model=="HuBERT (Transformer)", Layer==LAYER) %>%
+#         Model=="HuBERT (Transformer)", Layer==LAYER) %>%
+         Model=="HuBERT (Probabilities)") %>%
     rename(`Δ HuBERT`=`Δ Model`) %>%
     mutate(`Δ HuBERT (Scaled)`=scale_and_recenter(`Δ HuBERT`))
 
