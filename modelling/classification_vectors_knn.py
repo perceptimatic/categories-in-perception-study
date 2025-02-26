@@ -9,30 +9,8 @@ import glob
 from collections import defaultdict
 
 
-def average_probability(test_labels, compiled_probabilities):
-    average_probabilities = {}
-    count = {}
-
-    for label in test_labels:
-        count[label] = 0
-
-    for item in compiled_probabilities:
-        if item[0] not in average_probabilities:
-            average_probabilities[item[0]] = item[1]
-        else:
-            for label_i, label in enumerate(item[1]):
-                average_probabilities[item[0]][label] += item[1][label]
-                # [(xa, {a: 0.6, xa: 0.4, i: 0.0}),
-                # (xa, {a: 0.2, xa: 0.4, i: 0.4})]
-        count[item[0]] += 1
-    for vowel in average_probabilities:
-        for key in average_probabilities[vowel]:
-            average_probabilities[vowel][key] /= count[vowel]
-    return average_probabilities
-
-
 def neighbour_classification_vectors(X_train, X_test, y_train, k, metric="cosine"):
-    labels = sorted(set(y_train))
+    labels, overall_counts = np.unique(y_train, return_counts=True)
     counts = np.zeros((X_test.shape[0], len(labels)))
     distances = scipy.spatial.distance.cdist(X_test, X_train, metric=metric)
     train_indices = list(range(X_train.shape[0]))
@@ -42,7 +20,8 @@ def neighbour_classification_vectors(X_train, X_test, y_train, k, metric="cosine
         counts_i = defaultdict(int, dict(zip(*np.unique(y_i, return_counts=True))))
         for i_lab, label in enumerate(labels):
             counts[i, i_lab] = counts_i[label]
-    return pd.DataFrame(counts / k, columns=labels)
+    probs = counts / k
+    return pd.DataFrame(probs, columns=labels)
 
 
 def replace_suffix(filename, suffix):
@@ -103,7 +82,9 @@ if __name__ == "__main__":
     fns_ref, X_ref = read_features(
         args.ref_dir, args.frame_rate, args.rep_filename_suffix, ref_info_table
     )
-    fns_test, X_test = read_features(args.test_dir, args.frame_rate, args.rep_filename_suffix)
+    fns_test, X_test = read_features(
+        args.test_dir, args.frame_rate, args.rep_filename_suffix
+    )
 
     k = args.k
     if k is None:
@@ -111,5 +92,7 @@ if __name__ == "__main__":
     classification_vectors = neighbour_classification_vectors(
         X_ref, X_test, ref_info_table.phone_label, k
     )
-    classification_vectors['filename'] = [replace_suffix(os.path.basename(f), "") for f in fns_test]
+    classification_vectors["filename"] = [
+        replace_suffix(os.path.basename(f), "") for f in fns_test
+    ]
     classification_vectors.to_csv(args.output_file, index=False)

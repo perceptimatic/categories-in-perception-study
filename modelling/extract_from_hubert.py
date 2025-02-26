@@ -20,6 +20,7 @@ def main(
     feat_dir,
     max_chunk,
     filename_column="#file_extract",
+    add_suffix="",
 ):
     print(ckpt_path)
     if not os.path.exists(feat_dir):
@@ -30,9 +31,9 @@ def main(
         ind = f.readline().replace("\n", "").split(",")
         for line in f:
             new_line = line.replace("\n", "").split(",")
-            fili = new_line[ind.index(filename_column)]
+            fili = new_line[ind.index(filename_column)] + add_suffix
             feat = reader.get_feats(path=os.path.join(input_directory, fili))
-            np.save(os.path.join(feat_dir, fili.replace(".wav", ".npy")), feat)
+            np.save(os.path.join(feat_dir, os.path.splitext(fili)[0] + ".npy"), feat)
     else:
         for file in os.listdir(input_directory):
             if not file.endswith(".wav"):
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("layers", type=str, help="layers to extract")
     parser.add_argument("--max_chunk", type=int, default=1600000)
     parser.add_argument("--filename_column", type=str, default="#file_extract")
+    parser.add_argument("--add_suffix", type=str, default="")
     args = parser.parse_args()
     # logger.info(args)
 
@@ -65,4 +67,5 @@ if __name__ == "__main__":
             args.feat_dir + "/" + layer,
             args.max_chunk,
             args.filename_column,
+            args.add_suffix,
         )
